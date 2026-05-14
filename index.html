@@ -582,8 +582,7 @@ const _p = [50,54,49,55].map(c=>String.fromCharCode(c)).join('');
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('button');
   if (!btn || btn.disabled) return;
-  // No aplicar a botones del PIN ni navegación
-  if (btn.classList.contains('pin-key') || btn.classList.contains('nav-btn') || btn.classList.contains('sub-btn')) return;
+  if (btn.classList.contains('pin-key') || btn.classList.contains('nav-btn') || btn.classList.contains('sub-btn') || btn.classList.contains('action-btn') || btn.classList.contains('move-btn')) return;
   btn.style.opacity = '0.6';
   setTimeout(() => { btn.style.opacity = ''; }, 600);
 }, true);
@@ -689,6 +688,11 @@ async function init() {
     document.getElementById('fecha-entrega').value = manana.toISOString().split('T')[0];
 
     addItem();
+
+    // Cargar badges del header sin abrir el Kanban
+    const pedidos = await apiFetch({ action: 'getPedidos' });
+    todosPedidos = Array.isArray(pedidos) ? pedidos : [];
+    actualizarBadges(todosPedidos);
   } catch(e) {
     document.getElementById('header-sub').textContent = 'Error al conectar';
     document.getElementById('db-status-dot').style.background = '#EF4444';
@@ -828,32 +832,177 @@ function cerrarModalPDF() {
 
 function confirmarGenerarPDF() {
   if (!pedidoParaPDF) return;
-  // Temporalmente setear los valores en los checkboxes del form principal
-  // para que generarPDF los lea correctamente
-  const envioMonto = document.getElementById('pdf-envio-monto').value;
+
   const checkEnvio = document.getElementById('pdf-check-envio').checked;
   const checkIva   = document.getElementById('pdf-check-iva').checked;
+  const envioMonto = parseFloat(document.getElementById('pdf-envio-monto').value) || 0;
 
-  // Sobrescribir temporalmente los elementos del form si existen
-  const ceEl = document.getElementById('check-envio');
-  const ciEl = document.getElementById('check-iva');
-  const emEl = document.getElementById('envio-monto');
-
-  const prevEnvio = ceEl ? ceEl.checked : false;
-  const prevIva   = ciEl ? ciEl.checked : false;
-  const prevMonto = emEl ? emEl.value   : '0';
-
-  if (ceEl) ceEl.checked = checkEnvio;
-  if (ciEl) ciEl.checked = checkIva;
-  if (emEl) emEl.value   = envioMonto;
-
+  const pedido = pedidoParaPDF;
   cerrarModalPDF();
-  generarPDF(pedidoParaPDF);
 
-  // Restaurar valores originales
-  if (ceEl) ceEl.checked = prevEnvio;
-  if (ciEl) ciEl.checked = prevIva;
-  if (emEl) emEl.value   = prevMonto;
+  // Generar PDF con opciones del modal
+  generarPDFConOpciones(pedido, checkEnvio, envioMonto, checkIva);
+}
+
+function generarPDFConOpciones(pedido, conEnvio, costoEnvio, conIva) {
+  if (!pedido) return;
+
+  const subtotal     = Number(pedido.total) || 0;
+  const baseConEnvio = subtotal + (conEnvio ? costoEnvio : 0);
+  const ivaAmt       = conIva ? Math.round(baseConEnvio * 0.21) : 0;
+  const totalFinal   = Math.round(baseConEnvio + ivaAmt);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, ML = 16, MR = 16;
+  const TW = W - ML - MR;
+  const COL = { cant: ML + TW - 30 - 38 - 18, precio: ML + TW - 30 - 38, sub: W - MR };
+  let y = 0;
+
+  const C_HEADER_BG  = [214, 190, 180];
+  const C_HEADER_TXT = [60, 45, 38];
+  const C_DARK       = [60, 45, 38];
+  const C_MID        = [120, 100, 88];
+  const C_LIGHT      = [200, 182, 172];
+  const C_ROW_ALT    = [250, 246, 243];
+
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(0, 0, W, 38, 'F');
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('La Chica Manteca', ML, 15);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...C_MID);
+  doc.text('Laminados  ·  Panadería Artesanal', ML, 22);
+  doc.setDrawColor(...C_LIGHT);
+  doc.setLineWidth(0.4);
+  doc.line(ML, 26, W - MR, 26);
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NOTA DE PEDIDO', ML, 33);
+  doc.setFont('helvetica', 'normal');
+  doc.text('N° ' + pedido.id, W / 2, 33, { align: 'center' });
+  doc.text('Emitido: ' + new Date().toLocaleDateString('es-AR'), W - MR, 33, { align: 'right' });
+
+  y = 50;
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(ML, y - 5, 3, 20, 'F');
+  doc.setTextColor(...C_DARK);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(pedido.cliente, ML + 7, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...C_MID);
+  if (pedido.fecha) { doc.text('Fecha de entrega:  ' + pedido.fecha.split('-').reverse().join('/'), ML + 7, y); y += 5; }
+  doc.text('Estado:  ' + pedido.estado, ML + 7, y);
+  y += 5;
+  if (pedido.obs) { doc.setTextColor(150, 130, 118); doc.text('Obs:  ' + pedido.obs, ML + 7, y); y += 5; }
+  y += 8;
+
+  const ROW_H = 9;
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(ML, y, TW, ROW_H, 'F');
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DESCRIPCIÓN', ML + 4, y + 6);
+  doc.text('CANT.', COL.cant, y + 6, { align: 'right' });
+  doc.text('PRECIO UNIT.', COL.precio, y + 6, { align: 'right' });
+  doc.text('SUBTOTAL', COL.sub, y + 6, { align: 'right' });
+  y += ROW_H;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  let rowAlt = false;
+  (pedido.items || []).forEach(item => {
+    if (rowAlt) { doc.setFillColor(...C_ROW_ALT); doc.rect(ML, y, TW, ROW_H, 'F'); }
+    rowAlt = !rowAlt;
+    const sub = item.precio * item.cantidad;
+    doc.setTextColor(...C_DARK);
+    doc.text(String(item.nombre), ML + 4, y + 6);
+    doc.setTextColor(...C_MID);
+    doc.text(String(item.cantidad), COL.cant, y + 6, { align: 'right' });
+    doc.text('$' + Number(item.precio).toLocaleString('es-AR'), COL.precio, y + 6, { align: 'right' });
+    doc.setTextColor(...C_DARK);
+    doc.text('$' + Math.round(sub).toLocaleString('es-AR'), COL.sub, y + 6, { align: 'right' });
+    y += ROW_H;
+  });
+
+  doc.setDrawColor(...C_LIGHT);
+  doc.setLineWidth(0.5);
+  doc.line(ML, y, W - MR, y);
+  y += 8;
+
+  const LX = 118;
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C_MID);
+  doc.text('Subtotal productos', LX, y);
+  doc.setTextColor(...C_DARK);
+  doc.text('$' + Math.round(subtotal).toLocaleString('es-AR'), W - MR, y, { align: 'right' });
+  y += 7;
+
+  if (conEnvio && costoEnvio > 0) {
+    doc.setTextColor(...C_MID);
+    doc.text('Costo de envío', LX, y);
+    doc.setTextColor(...C_DARK);
+    doc.text('$' + Math.round(costoEnvio).toLocaleString('es-AR'), W - MR, y, { align: 'right' });
+    y += 7;
+  }
+
+  if (conIva) {
+    doc.setTextColor(...C_MID);
+    doc.text('IVA (21%)', LX, y);
+    doc.setTextColor(...C_DARK);
+    doc.text('$' + ivaAmt.toLocaleString('es-AR'), W - MR, y, { align: 'right' });
+    y += 7;
+  }
+
+  doc.setDrawColor(...C_LIGHT);
+  doc.setLineWidth(0.4);
+  doc.line(LX, y, W - MR, y);
+  y += 2;
+
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(ML, y, TW, 13, 'F');
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('TOTAL', ML + 4, y + 8.5);
+  doc.setFontSize(13);
+  doc.text('$' + totalFinal.toLocaleString('es-AR'), W - MR - 2, y + 8.5, { align: 'right' });
+  y += 20;
+
+  if (conIva) {
+    doc.setTextColor(...C_MID);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.text('* Precio final con IVA (21%) incluido', ML, y);
+    y += 8;
+  }
+
+  doc.setDrawColor(...C_LIGHT);
+  doc.setLineWidth(0.3);
+  doc.line(ML, y, W - MR, y);
+  y += 5;
+  doc.setTextColor(...C_LIGHT);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text('La Chica Manteca  ·  Laminados  ·  Documento no válido como factura', W / 2, y, { align: 'center' });
+
+  const nombreArchivo = 'pedido-' + pedido.id + '-' + pedido.cliente.replace(/\s+/g, '-') + '.pdf';
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = nombreArchivo;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 function generarPDF(pedido) {
@@ -1072,6 +1221,45 @@ const ESTADOS   = ['Nuevo', 'Producción', 'Listo', 'Entregado'];
 const COL_IDS   = { 'Nuevo': 'col-nuevo', 'Producción': 'col-produccion', 'Listo': 'col-listo', 'Entregado': 'col-entregado' };
 const COUNT_IDS = { 'Nuevo': 'count-nuevo', 'Producción': 'count-produccion', 'Listo': 'count-listo', 'Entregado': 'count-entregado' };
 
+function actualizarBadges(pedidos) {
+  const activos = pedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
+  const nuevos  = pedidos.filter(p => p.estado === 'Nuevo').length;
+
+  let medialunas = 0, croissants = 0, panchoco = 0;
+  let trenzas = 0, hojaldres = 0, palmeritas = 0, danesas = 0;
+
+  activos.forEach(p => {
+    (p.items || []).forEach(it => {
+      const n = String(it.nombre).toLowerCase().trim();
+      const cant = Number(it.cantidad) || 0;
+      if (n === 'medialuna')                        medialunas += cant;
+      if (n === 'caja medialunas x30')              medialunas += cant * 30;
+      if (n === 'medialuna docena minorista x12')   medialunas += cant * 12;
+      if (n === 'croissant')                        croissants += cant;
+      if (n === 'caja croissant x20')               croissants += cant * 20;
+      if (n === 'pan de choco')                     panchoco += cant;
+      if (n === 'caja pan de choco x20')            panchoco += cant * 20;
+      if (n === 'trenza')                           trenzas += cant;
+      if (n === 'caja trenzas x20')                 trenzas += cant * 20;
+      if (n === 'hojaldre')                         hojaldres += cant;
+      if (n === 'caja hojaldre x20')                hojaldres += cant * 20;
+      if (n === 'palmerita')                        palmeritas += cant;
+      if (n === 'caja palmeritas x20')              palmeritas += cant * 20;
+      if (n === 'danesa')                           danesas += cant;
+      if (n === 'caja danesas x20')                 danesas += cant * 20;
+    });
+  });
+
+  document.getElementById('badge-nuevos').textContent     = nuevos;
+  document.getElementById('badge-medialunas').textContent = medialunas;
+  document.getElementById('badge-croissants').textContent = croissants;
+  document.getElementById('badge-panchoco').textContent   = panchoco;
+  document.getElementById('badge-trenzas').textContent    = trenzas;
+  document.getElementById('badge-hojaldres').textContent  = hojaldres;
+  document.getElementById('badge-palmeritas').textContent = palmeritas;
+  document.getElementById('badge-danesas').textContent    = danesas;
+}
+
 async function loadKanban() {
   showLoading('Cargando pedidos...');
   try {
@@ -1079,51 +1267,8 @@ async function loadKanban() {
     if (pedidos.error) throw new Error(pedidos.error);
     todosPedidos = Array.isArray(pedidos) ? pedidos : [];
     document.getElementById('kanban-search').value = '';
-    // Actualizar badges del header
-    const activos = todosPedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
-    const nuevos  = todosPedidos.filter(p => p.estado === 'Nuevo').length;
-
-    let medialunas = 0, croissants = 0, panchoco = 0;
-    let trenzas = 0, hojaldres = 0, palmeritas = 0, danesas = 0;
-
-    activos.forEach(p => {
-      (p.items || []).forEach(it => {
-        const n = String(it.nombre).toLowerCase().trim();
-        const cant = Number(it.cantidad) || 0;
-        // Medialunas
-        if (n === 'medialuna')                        medialunas += cant;
-        if (n === 'caja medialunas x30')              medialunas += cant * 30;
-        if (n === 'medialuna docena minorista x12')   medialunas += cant * 12;
-        // Croissants
-        if (n === 'croissant')                        croissants += cant;
-        if (n === 'caja croissant x20')               croissants += cant * 20;
-        // Pan de choco
-        if (n === 'pan de choco')                     panchoco += cant;
-        if (n === 'caja pan de choco x20')            panchoco += cant * 20;
-        // Trenzas
-        if (n === 'trenza')                           trenzas += cant;
-        if (n === 'caja trenzas x20')                 trenzas += cant * 20;
-        // Hojaldres
-        if (n === 'hojaldre')                         hojaldres += cant;
-        if (n === 'caja hojaldre x20')                hojaldres += cant * 20;
-        // Palmeritas
-        if (n === 'palmerita')                        palmeritas += cant;
-        if (n === 'caja palmeritas x20')              palmeritas += cant * 20;
-        // Danesas
-        if (n === 'danesa')                           danesas += cant;
-        if (n === 'caja danesas x20')                 danesas += cant * 20;
-      });
-    });
-
-    document.getElementById('badge-nuevos').textContent     = nuevos;
-    document.getElementById('badge-medialunas').textContent = medialunas;
-    document.getElementById('badge-croissants').textContent = croissants;
-    document.getElementById('badge-panchoco').textContent   = panchoco;
-    document.getElementById('badge-trenzas').textContent    = trenzas;
-    document.getElementById('badge-hojaldres').textContent  = hojaldres;
-    document.getElementById('badge-palmeritas').textContent = palmeritas;
-    document.getElementById('badge-danesas').textContent    = danesas;
-    renderKanban(todosPedidos.filter(p => p.estado !== 'Archivado'));
+    actualizarBadges(todosPedidos);
+    renderKanban(todosPedidos.filter(p => p.estado !== 'Archivado' && p.estado !== 'Cobrado'));
   } catch(e) {
     alert('Error al cargar pedidos: ' + e.message);
   }
@@ -1132,7 +1277,7 @@ async function loadKanban() {
 
 function filtrarKanban() {
   const q = document.getElementById('kanban-search').value.toLowerCase().trim();
-  const activos = todosPedidos.filter(p => p.estado !== 'Archivado');
+  const activos = todosPedidos.filter(p => p.estado !== 'Archivado' && p.estado !== 'Cobrado');
   if (!q) { renderKanban(activos); return; }
   renderKanban(activos.filter(p => p.cliente && p.cliente.toLowerCase().includes(q)));
 }
@@ -1183,7 +1328,7 @@ function pedidoCardHTML(p) {
       <div class="card-actions">
         <button class="action-btn edit"    onclick="abrirEditarById('${p.id}')">✏️ Editar</button>
         <button class="action-btn pdf-btn" onclick="generarPDFById('${p.id}')">📄 PDF</button>
-        <button class="action-btn archive" onclick="archivarPedido('${p.id}')">📦 Archivar</button>
+        <button class="action-btn archive" onclick="archivarPedido('${p.id}')">✅ Cobrado</button>
         <button class="action-btn delete"  onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
       </div>
     </div>
@@ -1211,10 +1356,10 @@ async function moverPedido(id, nuevoEstado) {
 }
 
 async function archivarPedido(id) {
-  if (!confirm('¿Archivar el pedido ' + id + '? Va a desaparecer del Kanban pero se mantiene en la base de datos.')) return;
-  showLoading('Archivando pedido...');
+  if (!confirm('¿Marcar el pedido ' + id + ' como cobrado? Va a desaparecer del Kanban y se contabiliza en estadísticas.')) return;
+  showLoading('Guardando...');
   try {
-    const res = await apiFetch({ action: 'actualizarEstado', id, estado: 'Archivado' });
+    const res = await apiFetch({ action: 'actualizarEstado', id, estado: 'Cobrado' });
     if (res.error) throw new Error(res.error);
     hideLoading();
     await loadKanban();
@@ -1600,7 +1745,7 @@ function parseFecha(str) {
 
 function pedidoEnPeriodo(p) {
   // Solo contar pedidos Entregados o Archivados como ventas
-  if (p.estado !== 'Entregado' && p.estado !== 'Archivado') return false;
+  if (p.estado !== 'Entregado' && p.estado !== 'Archivado' && p.estado !== 'Cobrado') return false;
   // Usar fecha del pedido; si no tiene, usar ID (timestamp)
   let fecha = parseFecha(p.fecha);
   if (!fecha) {
@@ -1810,7 +1955,7 @@ function renderStats() {
   });
   const estadoColors = {
     'Nuevo': '#818CF8', 'Producción': '#FB923C',
-    'Listo': '#4ADE80', 'Entregado': '#94A3B8', 'Archivado': '#CBD5E1'
+    'Listo': '#4ADE80', 'Entregado': '#94A3B8', 'Archivado': '#CBD5E1', 'Cobrado': '#34D399'
   };
   const eLabels = Object.keys(estadoMap);
   const eValues = Object.values(estadoMap);
