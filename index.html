@@ -258,8 +258,8 @@ canvas { width: 100% !important; }
         <select id="edit-estado">
           <option value="Nuevo">Nuevo</option>
           <option value="Producción">Producción</option>
-          <option value="Listo">Listo</option>
-          <option value="Entregado">Entregado</option>
+          <option value="Listo">Listo para entregar</option>
+          <option value="Entregado">Entregado por cobrar</option>
         </select>
       </div>
     </div>
@@ -276,6 +276,18 @@ canvas { width: 100% !important; }
       </div>
       <div id="edit-items-container"></div>
       <button class="btn-add-item" onclick="addEditItem()">+ Agregar producto</button>
+
+      <!-- Envío -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" id="edit-check-envio" onchange="toggleEditEnvio()" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
+          <label for="edit-check-envio" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Agregar costo de envío</label>
+        </div>
+      </div>
+      <div id="edit-envio-wrap" style="display:none;padding-bottom:8px">
+        <input type="number" id="edit-envio-monto" placeholder="0" min="0" value="0" />
+      </div>
+
       <div class="total-row">
         <span class="total-label">Total estimado</span>
         <span class="total-val" id="edit-total-display">$0</span>
@@ -285,6 +297,31 @@ canvas { width: 100% !important; }
     <button class="btn-primary" style="margin-top:16px" onclick="guardarEdicion()">Guardar cambios</button>
     <div class="status" id="status-editar"></div>
     <button class="btn-danger" onclick="confirmarEliminar()">Eliminar pedido</button>
+  </div>
+</div>
+
+<!-- Modal PDF desde Kanban -->
+<div class="modal-overlay" id="modal-pdf">
+  <div class="modal" style="max-height:60vh">
+    <div class="modal-header">
+      <span class="modal-title">Opciones del PDF</span>
+      <button class="modal-close" onclick="cerrarModalPDF()">✕</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" id="pdf-check-envio" onchange="togglePDFEnvio()" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
+      <label for="pdf-check-envio" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Agregar costo de envío</label>
+    </div>
+    <div id="pdf-envio-wrap" style="display:none;padding:10px 0 4px">
+      <input type="number" id="pdf-envio-monto" placeholder="0" min="0" value="0" />
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+      <input type="checkbox" id="pdf-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
+      <label for="pdf-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Incluir IVA (21%)</label>
+    </div>
+
+    <button class="btn-primary" style="margin-top:8px" onclick="confirmarGenerarPDF()">📄 Generar PDF</button>
   </div>
 </div>
 
@@ -304,20 +341,45 @@ canvas { width: 100% !important; }
     </div>
   </div>
   <!-- Barra de estado -->
-  <div style="display:flex;margin-top:12px;border-top:1px solid rgba(255,255,255,0.2);padding-top:12px;justify-content:space-around;text-align:center">
+  <div style="display:flex;margin-top:12px;border-top:1px solid rgba(255,255,255,0.2);padding-top:12px;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
     <div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pedidos nuevos</div>
-      <div id="badge-nuevos" style="font-size:30px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Nuevos</div>
+      <div id="badge-nuevos" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
     </div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div>
-      <div id="badge-medialunas" style="font-size:30px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div>
+      <div id="badge-medialunas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
     </div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Croissants</div>
-      <div id="badge-croissants" style="font-size:30px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Croissants</div>
+      <div id="badge-croissants" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div>
+      <div id="badge-panchoco" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div>
+      <div id="badge-trenzas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div>
+      <div id="badge-hojaldres" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div>
+      <div id="badge-palmeritas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div>
+      <div id="badge-danesas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
     </div>
   </div>
 </header>
@@ -343,8 +405,8 @@ canvas { width: 100% !important; }
         <select id="estado">
           <option value="Nuevo">Nuevo</option>
           <option value="Producción">Producción</option>
-          <option value="Listo">Listo</option>
-          <option value="Entregado">Entregado</option>
+          <option value="Listo">Listo para entregar</option>
+          <option value="Entregado">Entregado por cobrar</option>
         </select>
       </div>
     </div>
@@ -421,11 +483,11 @@ canvas { width: 100% !important; }
       <div class="kanban-cards" id="col-produccion"></div>
     </div>
     <div class="kanban-col col-listo">
-      <div class="kanban-col-header">Listo <span class="count" id="count-listo">0</span></div>
+      <div class="kanban-col-header">Listo para entregar <span class="count" id="count-listo">0</span></div>
       <div class="kanban-cards" id="col-listo"></div>
     </div>
     <div class="kanban-col col-entregado">
-      <div class="kanban-col-header">Entregado <span class="count" id="count-entregado">0</span></div>
+      <div class="kanban-col-header">Entregado por cobrar <span class="count" id="count-entregado">0</span></div>
       <div class="kanban-cards" id="col-entregado"></div>
     </div>
   </div>
@@ -514,6 +576,17 @@ canvas { width: 100% !important; }
 const API = 'https://script.google.com/macros/s/AKfycbyklS8gfQH1-Quz4Fm84NOM-GZ4bn52s3iqsQMqS-ouqLCLfzJ7zjenRqd4lbjijYuK/exec';
 // PIN ofuscado — no es texto plano
 const _p = [50,54,49,55].map(c=>String.fromCharCode(c)).join('');
+
+// ── PROTECCIÓN GLOBAL DE BOTONES ─────────────────────────────
+// Evita doble tap en cualquier botón de la app
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('button');
+  if (!btn || btn.disabled) return;
+  // No aplicar a botones del PIN ni navegación
+  if (btn.classList.contains('pin-key') || btn.classList.contains('nav-btn') || btn.classList.contains('sub-btn')) return;
+  btn.style.opacity = '0.6';
+  setTimeout(() => { btn.style.opacity = ''; }, 600);
+}, true);
 
 // ── RELOJ ─────────────────────────────────────────────────────
 function actualizarReloj() {
@@ -729,10 +802,58 @@ function toggleEnvio() {
   document.getElementById('envio-monto-wrap').style.display = checked ? 'block' : 'none';
 }
 
+let pedidoParaPDF = null;
+
 function generarPDFById(id) {
   const pedido = todosPedidos.find(p => p.id === id);
   if (!pedido) { alert('No se encontró el pedido.'); return; }
-  generarPDF(pedido);
+  pedidoParaPDF = pedido;
+  // Resetear opciones
+  document.getElementById('pdf-check-envio').checked = false;
+  document.getElementById('pdf-check-iva').checked = false;
+  document.getElementById('pdf-envio-wrap').style.display = 'none';
+  document.getElementById('pdf-envio-monto').value = '0';
+  document.getElementById('modal-pdf').classList.add('open');
+}
+
+function togglePDFEnvio() {
+  const checked = document.getElementById('pdf-check-envio').checked;
+  document.getElementById('pdf-envio-wrap').style.display = checked ? 'block' : 'none';
+}
+
+function cerrarModalPDF() {
+  document.getElementById('modal-pdf').classList.remove('open');
+  pedidoParaPDF = null;
+}
+
+function confirmarGenerarPDF() {
+  if (!pedidoParaPDF) return;
+  // Temporalmente setear los valores en los checkboxes del form principal
+  // para que generarPDF los lea correctamente
+  const envioMonto = document.getElementById('pdf-envio-monto').value;
+  const checkEnvio = document.getElementById('pdf-check-envio').checked;
+  const checkIva   = document.getElementById('pdf-check-iva').checked;
+
+  // Sobrescribir temporalmente los elementos del form si existen
+  const ceEl = document.getElementById('check-envio');
+  const ciEl = document.getElementById('check-iva');
+  const emEl = document.getElementById('envio-monto');
+
+  const prevEnvio = ceEl ? ceEl.checked : false;
+  const prevIva   = ciEl ? ciEl.checked : false;
+  const prevMonto = emEl ? emEl.value   : '0';
+
+  if (ceEl) ceEl.checked = checkEnvio;
+  if (ciEl) ciEl.checked = checkIva;
+  if (emEl) emEl.value   = envioMonto;
+
+  cerrarModalPDF();
+  generarPDF(pedidoParaPDF);
+
+  // Restaurar valores originales
+  if (ceEl) ceEl.checked = prevEnvio;
+  if (ciEl) ciEl.checked = prevIva;
+  if (emEl) emEl.value   = prevMonto;
 }
 
 function generarPDF(pedido) {
@@ -935,7 +1056,15 @@ function generarPDF(pedido) {
   doc.setFontSize(7.5);
   doc.text('La Chica Manteca  ·  Laminados  ·  Documento no válido como factura', W / 2, y, { align: 'center' });
 
-  doc.save('pedido-' + pedido.id + '-' + pedido.cliente + '.pdf');
+  const nombreArchivo = 'pedido-' + pedido.id + '-' + pedido.cliente.replace(/\s+/g, '-') + '.pdf';
+  // En iOS Safari doc.save() muestra la blob URL — usamos output blob para mejor compatibilidad
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = nombreArchivo;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ── KANBAN ────────────────────────────────────────────────────
@@ -954,22 +1083,46 @@ async function loadKanban() {
     const activos = todosPedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
     const nuevos  = todosPedidos.filter(p => p.estado === 'Nuevo').length;
 
-    let medialunas = 0;
-    let croissants = 0;
+    let medialunas = 0, croissants = 0, panchoco = 0;
+    let trenzas = 0, hojaldres = 0, palmeritas = 0, danesas = 0;
+
     activos.forEach(p => {
       (p.items || []).forEach(it => {
-        const n = String(it.nombre).toLowerCase();
+        const n = String(it.nombre).toLowerCase().trim();
         const cant = Number(it.cantidad) || 0;
-        if (n === 'medialuna')               medialunas += cant;
-        if (n === 'caja medialunas x30')     medialunas += cant * 30;
-        if (n === 'croissant')               croissants += cant;
-        if (n === 'caja croissant x20')      croissants += cant * 20;
+        // Medialunas
+        if (n === 'medialuna')                        medialunas += cant;
+        if (n === 'caja medialunas x30')              medialunas += cant * 30;
+        if (n === 'medialuna docena minorista x12')   medialunas += cant * 12;
+        // Croissants
+        if (n === 'croissant')                        croissants += cant;
+        if (n === 'caja croissant x20')               croissants += cant * 20;
+        // Pan de choco
+        if (n === 'pan de choco')                     panchoco += cant;
+        if (n === 'caja pan de choco x20')            panchoco += cant * 20;
+        // Trenzas
+        if (n === 'trenza')                           trenzas += cant;
+        if (n === 'caja trenzas x20')                 trenzas += cant * 20;
+        // Hojaldres
+        if (n === 'hojaldre')                         hojaldres += cant;
+        if (n === 'caja hojaldre x20')                hojaldres += cant * 20;
+        // Palmeritas
+        if (n === 'palmerita')                        palmeritas += cant;
+        if (n === 'caja palmeritas x20')              palmeritas += cant * 20;
+        // Danesas
+        if (n === 'danesa')                           danesas += cant;
+        if (n === 'caja danesas x20')                 danesas += cant * 20;
       });
     });
 
     document.getElementById('badge-nuevos').textContent     = nuevos;
     document.getElementById('badge-medialunas').textContent = medialunas;
     document.getElementById('badge-croissants').textContent = croissants;
+    document.getElementById('badge-panchoco').textContent   = panchoco;
+    document.getElementById('badge-trenzas').textContent    = trenzas;
+    document.getElementById('badge-hojaldres').textContent  = hojaldres;
+    document.getElementById('badge-palmeritas').textContent = palmeritas;
+    document.getElementById('badge-danesas').textContent    = danesas;
     renderKanban(todosPedidos.filter(p => p.estado !== 'Archivado'));
   } catch(e) {
     alert('Error al cargar pedidos: ' + e.message);
@@ -998,10 +1151,11 @@ function renderKanban(pedidos) {
 
 function pedidoCardHTML(p) {
   const idx    = ESTADOS.indexOf(p.estado);
+  const LABELS = { 'Nuevo': 'Nuevo', 'Producción': 'Producción', 'Listo': 'Listo para entregar', 'Entregado': 'Entregado por cobrar' };
   const prev   = idx > 0 ? ESTADOS[idx - 1] : null;
   const next   = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
-  const btnPrev = prev ? `<button class="move-btn" onclick="moverPedido('${p.id}','${prev}')">← ${prev}</button>` : '';
-  const btnNext = next ? `<button class="move-btn" onclick="moverPedido('${p.id}','${next}')">${next} →</button>` : '';
+  const btnPrev = prev ? `<button class="move-btn" onclick="moverPedido('${p.id}','${prev}')">← ${LABELS[prev]}</button>` : '';
+  const btnNext = next ? `<button class="move-btn" onclick="moverPedido('${p.id}','${next}')">${LABELS[next]} →</button>` : '';
 
   let itemsHTML = '';
   if (p.items && p.items.length > 0) {
@@ -1113,6 +1267,9 @@ function abrirEditar(p) {
   }
 
   document.getElementById('status-editar').className = 'status';
+  document.getElementById('edit-check-envio').checked = false;
+  document.getElementById('edit-envio-wrap').style.display = 'none';
+  document.getElementById('edit-envio-monto').value = '0';
   document.getElementById('modal-editar').classList.add('open');
 }
 
@@ -1145,6 +1302,12 @@ function removeEditItem(id) {
   recalcEditTotal();
 }
 
+function toggleEditEnvio() {
+  const checked = document.getElementById('edit-check-envio').checked;
+  document.getElementById('edit-envio-wrap').style.display = checked ? 'block' : 'none';
+  recalcEditTotal();
+}
+
 function recalcEditTotal() {
   let total = 0;
   document.querySelectorAll('#edit-items-container .item-row').forEach(row => {
@@ -1155,7 +1318,9 @@ function recalcEditTotal() {
       total += precio * (parseInt(cant.value) || 0);
     }
   });
-  document.getElementById('edit-total-display').textContent = '$' + Math.round(total).toLocaleString('es-AR');
+  const conEnvio = document.getElementById('edit-check-envio') && document.getElementById('edit-check-envio').checked;
+  const envio = conEnvio ? (parseFloat(document.getElementById('edit-envio-monto').value) || 0) : 0;
+  document.getElementById('edit-total-display').textContent = '$' + Math.round(total + envio).toLocaleString('es-AR');
 }
 
 function getEditItems() {
@@ -1182,6 +1347,8 @@ async function guardarEdicion() {
   const estado  = document.getElementById('edit-estado').value;
   const obs     = document.getElementById('edit-observaciones').value;
   const items   = getEditItems();
+  const conEnvio = document.getElementById('edit-check-envio').checked;
+  const envio    = conEnvio ? (parseFloat(document.getElementById('edit-envio-monto').value) || 0) : 0;
 
   if (!cliente) { showStatus('status-editar', 'Seleccioná un cliente.', 'err'); return; }
   if (items.length === 0) { showStatus('status-editar', 'Agregá al menos un producto.', 'err'); return; }
@@ -1191,7 +1358,14 @@ async function guardarEdicion() {
   showStatus('status-editar', 'Enviando cambios...', 'loading');
 
   try {
-    const res = await apiFetch({ action: 'editarPedido', id: pedidoEnEdicion.id, cliente, fecha, estado, observaciones: obs, items: JSON.stringify(items) });
+    const res = await apiFetch({
+      action: 'editarPedido',
+      id: pedidoEnEdicion.id,
+      cliente, fecha, estado,
+      observaciones: obs,
+      items: JSON.stringify(items),
+      envio: envio
+    });
     if (res.error) throw new Error(res.error);
     showStatus('status-editar', '✓ Pedido editado correctamente', 'ok');
     btnGuardar.textContent = '✓ Guardado';
@@ -1207,8 +1381,9 @@ async function guardarEdicion() {
 function confirmarEliminar() {
   if (!pedidoEnEdicion) return;
   const id = pedidoEnEdicion.id;
-  cerrarModal();
-  setTimeout(() => eliminarPedido(id), 100);
+  document.getElementById('modal-editar').classList.remove('open');
+  pedidoEnEdicion = null;
+  setTimeout(() => eliminarPedido(id), 150);
 }
 
 // ── PRODUCTOS ─────────────────────────────────────────────────
