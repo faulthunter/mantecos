@@ -48,7 +48,8 @@ export default async function handler(req, res) {
       'Authorization': `Bearer ${ACCESS_TOKEN}`
     };
 
-    // Paso 1: Último comprobante
+    // Paso 1: Último comprobante (usar PtoVta 10 - Factura Electronica RI Web Services)
+    const ptoVta = 10;
     const lastRes = await fetch(`${BASE_URL}/afip/requests`, {
       method: 'POST',
       headers,
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
         cert: CERT,
         key: KEY,
         method: 'FECompUltimoAutorizado',
-        params: { PtoVta: parseInt(puntoVenta), CbteTipo: cbteTipo }
+        params: { PtoVta: ptoVta, CbteTipo: cbteTipo }
       })
     });
     const lastData = await lastRes.json();
@@ -94,7 +95,7 @@ export default async function handler(req, res) {
         method: 'FECAESolicitar',
         params: {
           FeCAEReq: {
-            FeCabReq: { CantReg: 1, PtoVta: parseInt(puntoVenta), CbteTipo: cbteTipo },
+            FeCabReq: { CantReg: 1, PtoVta: ptoVta, CbteTipo: cbteTipo },
             FeDetReq: { FECAEDetRequest: [voucherData] }
           }
         }
