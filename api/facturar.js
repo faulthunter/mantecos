@@ -1,8 +1,12 @@
-const CERT = process.env.AFIP_CERT;
-const KEY = process.env.AFIP_KEY;
+const CERT_RAW = process.env.AFIP_CERT;
+const KEY_RAW = process.env.AFIP_KEY;
 const CUIT = process.env.AFIP_CUIT;
 const ACCESS_TOKEN = process.env.AFIP_ACCESS_TOKEN;
 const BASE_URL = 'https://app.afipsdk.com/api/v1';
+
+// Normalizar cert/key: reemplazar \n literal por saltos de línea reales
+const CERT = CERT_RAW ? CERT_RAW.replace(/\\n/g, '\n') : '';
+const KEY = KEY_RAW ? KEY_RAW.replace(/\\n/g, '\n') : '';
 
 const EMAILS_PERMITIDOS = ['juliandilullo@gmail.com', 'sof.cosen@gmail.com'];
 
