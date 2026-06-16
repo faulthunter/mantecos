@@ -1,12 +1,6 @@
-const CERT_RAW = process.env.AFIP_CERT;
-const KEY_RAW = process.env.AFIP_KEY;
 const CUIT = process.env.AFIP_CUIT;
 const ACCESS_TOKEN = process.env.AFIP_ACCESS_TOKEN;
 const BASE_URL = 'https://app.afipsdk.com/api/v1';
-
-// Normalizar cert/key: reemplazar \n literal por saltos de línea reales
-const CERT = CERT_RAW ? CERT_RAW.replace(/\\n/g, '\n') : '';
-const KEY = KEY_RAW ? KEY_RAW.replace(/\\n/g, '\n') : '';
 
 const EMAILS_PERMITIDOS = ['juliandilullo@gmail.com', 'sof.cosen@gmail.com'];
 
@@ -30,7 +24,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'CUIT del cliente requerido para Factura A' });
     }
 
-    // Calcular importes
     const base = parseFloat(impTotal);
     const ivaAmt = conIva ? Math.round(base * 0.21 * 100) / 100 : 0;
     const total = Math.round((base + ivaAmt) * 100) / 100;
@@ -47,7 +40,7 @@ export default async function handler(req, res) {
       'Authorization': `Bearer ${ACCESS_TOKEN}`
     };
 
-    // Paso 1: Obtener el último comprobante para calcular el próximo número
+    // Paso 1: Último comprobante
     const lastRes = await fetch(`${BASE_URL}/afip/requests`, {
       method: 'POST',
       headers,
@@ -55,26 +48,21 @@ export default async function handler(req, res) {
         environment: 'prod',
         tax_id: CUIT,
         wsid: 'wsfe',
-        cert: CERT,
-        key: KEY,
         method: 'FECompUltimoAutorizado',
         params: { PtoVta: parseInt(puntoVenta), CbteTipo: cbteTipo }
       })
     });
     const lastData = await lastRes.json();
-    console.log('Last voucher:', JSON.stringify(lastData).substring(0, 200));
+    console.log('Last voucher:', JSON.stringify(lastData).substring(0, 300));
 
     if (lastData.error) throw new Error(lastData.error?.message || JSON.stringify(lastData.error));
 
     const lastRaw = lastData?.result || lastData;
-    const lastNum = lastRaw?.FECompUltimoAutorizadoResult?.CbteNro || lastRaw?.CbteNro || 0;
+    const lastNum = lastRaw?.FECompUltimoAutorizadoResult?.CbteNro ?? lastRaw?.CbteNro ?? 0;
     const nextNum = lastNum + 1;
 
-    // Paso 2: Crear el comprobante
+    // Paso 2: Solicitar CAE
     const voucherData = {
-      CantReg: 1,
-      PtoVta: parseInt(puntoVenta),
-      CbteTipo: cbteTipo,
       Concepto: 1,
       DocTipo: docTipo,
       DocNro: docNro,
@@ -103,8 +91,6 @@ export default async function handler(req, res) {
         environment: 'prod',
         tax_id: CUIT,
         wsid: 'wsfe',
-        cert: CERT,
-        key: KEY,
         method: 'FECAESolicitar',
         params: {
           FeCAEReq: {
@@ -120,26 +106,23 @@ export default async function handler(req, res) {
 
     if (caeData.error) throw new Error(caeData.error?.message || JSON.stringify(caeData.error).substring(0, 200));
 
-    // AFIP SDK puede devolver el resultado en distintos niveles
     const raw = caeData?.result || caeData;
     const solResult = raw?.FECAESolicitarResult || raw;
     const detResp = solResult?.FeDetResp?.FECAEDetResponse?.[0];
     console.log('detResp:', JSON.stringify(detResp || 'undefined'));
-    
+
     if (!detResp) {
-      throw new Error('Sin detResp. Raw: ' + JSON.stringify(raw).substring(0, 400));
+      const errors = solResult?.Errors?.Err || solResult?.Events?.Evt;
+      const msg = Array.isArray(errors) ? errors.map(e => e.Msg).join(', ') : 'Sin respuesta de AFIP';
+      throw new Error(msg);
     }
-    
-    if (!detResp) {
-      throw new Error('Sin respuesta de AFIP. Resultado raw: ' + JSON.stringify(caeData?.result).substring(0, 200));
-    }
+
     if (detResp.Resultado !== 'A') {
       const obs = detResp?.Observaciones?.Obs;
       const errores = detResp?.Errores?.Err;
       const msgObs = Array.isArray(obs) ? obs.map(o => o.Msg).join(', ') : (obs?.Msg || '');
       const msgErr = Array.isArray(errores) ? errores.map(e => e.Msg).join(', ') : (errores?.Msg || '');
-      const msg = msgErr || msgObs || 'Resultado: ' + detResp.Resultado;
-      throw new Error('AFIP rechazó: ' + msg);
+      throw new Error('AFIP rechazó: ' + (msgErr || msgObs || 'Resultado: ' + detResp.Resultado));
     }
 
     return res.status(200).json({
