@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const CERT = (process.env.AFIP_CERT || '').replace(/\\n/g, '\n').trim();
     const KEY  = (process.env.AFIP_KEY  || '').replace(/\\n/g, '\n').trim();
     const CUIT = process.env.AFIP_CUIT;
-    const ACCESS_TOKEN = process.env.AFIP_SDK_TOKEN;
+    const ACCESS_TOKEN = process.env.AFIP_ACCESS_TOKEN;
 
     console.log('CERT ok:', CERT.startsWith('-----BEGIN CERTIFICATE'));
     console.log('KEY ok:', KEY.startsWith('-----BEGIN RSA PRIVATE KEY') || KEY.startsWith('-----BEGIN PRIVATE KEY'));
