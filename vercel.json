@@ -4,6 +4,5 @@
       "memory": 512,
       "maxDuration": 30
     }
-  },
-  "_comment": "redeploy-with-fixed-env-vars"
+  }
 }
