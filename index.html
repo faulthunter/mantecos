@@ -327,19 +327,24 @@ canvas { width: 100% !important; }
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <input type="checkbox" id="pdf-check-envio" onchange="togglePDFEnvio()" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
+      <input type="checkbox" id="pdf-check-envio" onchange="togglePDFEnvio(); recalcModalPDF()" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
       <label for="pdf-check-envio" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Agregar costo de envío</label>
     </div>
     <div id="pdf-envio-wrap" style="display:none;padding:10px 0 4px">
-      <input type="number" id="pdf-envio-monto" placeholder="0" min="0" value="0" />
+      <input type="number" id="pdf-envio-monto" placeholder="0" min="0" value="0" oninput="recalcModalPDF()" />
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <input type="checkbox" id="pdf-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
+      <input type="checkbox" id="pdf-check-iva" onchange="recalcModalPDF()" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" />
       <label for="pdf-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Incluir IVA (21%)</label>
     </div>
 
-    <button class="btn-primary" style="margin-top:16px" onclick="confirmarGenerarPDF()">📄 Generar PDF</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 4px">
+      <span style="font-size:13px;color:var(--muted)">Total a facturar</span>
+      <span style="font-size:20px;font-weight:700;color:var(--accent)" id="pdf-total-preview">$0</span>
+    </div>
+
+    <button class="btn-primary" style="margin-top:8px" onclick="confirmarGenerarPDF()">📄 Generar PDF</button>
   </div>
 </div>
 
@@ -1247,11 +1252,24 @@ function generarPDFById(id) {
   document.getElementById('pdf-envio-wrap').style.display = tieneEnvio ? 'block' : 'none';
   document.getElementById('pdf-envio-monto').value = tieneEnvio ? pedido.envio : '0';
   document.getElementById('modal-pdf').classList.add('open');
+  recalcModalPDF();
 }
 
 function togglePDFEnvio() {
   const checked = document.getElementById('pdf-check-envio').checked;
   document.getElementById('pdf-envio-wrap').style.display = checked ? 'block' : 'none';
+}
+
+function recalcModalPDF() {
+  if (!pedidoParaPDF) return;
+  const subtotal   = (pedidoParaPDF.items || []).reduce((s, it) => s + (Number(it.precio) || 0) * (Number(it.cantidad) || 0), 0);
+  const conEnvio   = document.getElementById('pdf-check-envio').checked;
+  const envio      = conEnvio ? (parseFloat(document.getElementById('pdf-envio-monto').value) || 0) : 0;
+  const conIva     = document.getElementById('pdf-check-iva').checked;
+  const base       = subtotal + envio;
+  const iva        = conIva ? Math.round(base * 0.21) : 0;
+  const total      = Math.round(base + iva);
+  document.getElementById('pdf-total-preview').textContent = '$' + total.toLocaleString('es-AR');
 }
 
 function cerrarModalPDF() {
