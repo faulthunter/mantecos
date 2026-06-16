@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${ACCESS_TOKEN}`
       },
       body: JSON.stringify({
-        environment: 'production',
+        environment: 1,
         method: 'FECAESolicitar',
         wsid: 'wsfe',
         cuit: CUIT,
