@@ -3465,7 +3465,7 @@ async function confirmarFacturacion(id, subtotal) {
   const cuitCliente = document.getElementById('fact-cuit').value.trim();
   const condicion = document.getElementById('fact-condicion-iva').value;
   const conIva = document.getElementById('fact-check-iva').checked;
-  const puntoVenta = 1; // TODO: hacer configurable
+  const puntoVenta = 10;
 
   if (tipo === 'A' && !cuitCliente) {
     showStatus('status-facturar', 'Ingresá el CUIT del cliente para Factura A.', 'err');
@@ -3504,6 +3504,9 @@ async function confirmarFacturacion(id, subtotal) {
       'ok'
     );
     if (btn) btn.textContent = '✓ Facturado';
+    if (data.pdfUrl) {
+      window.open(data.pdfUrl, '_blank');
+    }
 
   } catch(e) {
     showStatus('status-facturar', 'Error: ' + e.message, 'err');
