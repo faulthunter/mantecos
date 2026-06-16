@@ -111,12 +111,16 @@ export default async function handler(req, res) {
     });
 
     const caeData = await caeRes.json();
-    console.log('CAE response:', JSON.stringify(caeData).substring(0, 500));
+    console.log('CAE full response:', JSON.stringify(caeData).substring(0, 800));
 
-    if (caeData.error) throw new Error(caeData.error?.message || JSON.stringify(caeData.error));
+    if (caeData.error) throw new Error(caeData.error?.message || JSON.stringify(caeData.error).substring(0, 200));
 
     const detResp = caeData?.result?.FeDetResp?.FECAEDetResponse?.[0];
-    console.log('detResp:', JSON.stringify(detResp).substring(0, 300));
+    console.log('detResp:', JSON.stringify(detResp || 'undefined'));
+    
+    if (!detResp) {
+      throw new Error('Sin detResp. Full result: ' + JSON.stringify(caeData?.result || caeData).substring(0, 300));
+    }
     
     if (!detResp) {
       throw new Error('Sin respuesta de AFIP. Resultado raw: ' + JSON.stringify(caeData?.result).substring(0, 200));
