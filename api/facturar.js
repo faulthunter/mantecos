@@ -93,6 +93,69 @@ export default async function handler(req, res) {
 
     console.log('Result:', JSON.stringify(result));
 
+    // Formatear fechas para el PDF (DD/MM/YYYY)
+    const fmtDate = (str) => {
+      // str puede ser yyyymmdd (CbteFch) o yyyy-mm-dd (CAEFchVto)
+      const s = String(str).replace(/-/g, '');
+      return s.slice(6,8) + '/' + s.slice(4,6) + '/' + s.slice(0,4);
+    };
+    const fechaEmision  = fmtDate(fecha);
+    const fechaVtoCae   = fmtDate(result.CAEFchVto);
+
+    // Mapas legibles
+    const condIvaStr = { RI:'Responsable Inscripto', EX:'Exento', CF:'Consumidor Final', MONO:'Monotributista' };
+    const templateName = tipo === 'A' ? 'invoice-a' : 'invoice-b';
+
+    const pdfData = {
+      file_name: `factura-${tipo}-${result.voucherNumber}.pdf`,
+      template: {
+        name: templateName,
+        params: {
+          voucher_number:            result.voucherNumber,
+          sales_point:               ptoVta,
+          issue_date:                fechaEmision,
+          cae_due_date:              fechaVtoCae,
+          issuer_cuit:               parseInt(CUIT),
+          cae:                       parseInt(result.CAE),
+          issuer_business_name:      'La Chica Manteca',
+          issuer_address:            'Salta, Argentina',
+          issuer_iva_condition:      'Responsable Inscripto',
+          issuer_gross_income:       String(CUIT),
+          issuer_activity_start_date:'01/01/2020',
+          receiver_name:             tipo === 'A' ? (cuitCliente || '-') : 'CONSUMIDOR FINAL',
+          receiver_address:          '-',
+          receiver_document_type:    docTipo,
+          receiver_document_number:  docNro,
+          receiver_iva_condition:    condIvaStr[condicionIva] || 'Consumidor Final',
+          sale_condition:            'Contado',
+          currency_id:               'ARS',
+          currency_rate:             1,
+          concept:                   1,
+          items: [
+            {
+              code:        '001',
+              description: 'Productos de panadería artesanal',
+              quantity:    1,
+              unit_price:  total,
+              subtotal:    total,
+            }
+          ],
+          vat_amount:      ivaAmt,
+          tributes_amount: 0,
+          total_amount:    total,
+          ...(tipo === 'A' && {
+            net_amount_taxed:   neto,
+            net_amount_untaxed: 0,
+            exempt_amount:      opEx,
+            vat_breakdown: ivaAmt > 0 ? [{ vat_rate_id: 21, taxable_base: neto, vat_subtotal: ivaAmt }] : [],
+          }),
+        }
+      }
+    };
+
+    const pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+    console.log('PDF URL:', pdfResult.file);
+
     return res.status(200).json({
       ok:             true,
       CAE:            result.CAE,
@@ -100,7 +163,8 @@ export default async function handler(req, res) {
       nroComprobante: result.voucherNumber,
       tipo,
       total,
-      puntoVenta: ptoVta,
+      puntoVenta:     ptoVta,
+      pdfUrl:         pdfResult.file,
     });
 
   } catch (e) {
