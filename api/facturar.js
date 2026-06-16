@@ -52,7 +52,9 @@ export default async function handler(req, res) {
     const condIvaId = condMap[condicionIva] || 5;
 
     const ptoVta = 10;
-    const fecha  = parseInt(new Date().toISOString().split('T')[0].replace(/-/g, ''));
+    // Fecha local Argentina (UTC-3) para evitar que de madrugada tome el día anterior
+    const now = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000));
+    const fecha  = parseInt(now.toISOString().split('T')[0].replace(/-/g, ''));
 
     // Armar objeto de comprobante
     const voucherData = {
