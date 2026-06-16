@@ -3445,20 +3445,53 @@ function cerrarModalFacturar() {
 
 async function confirmarFacturacion(id, subtotal) {
   const tipo = document.getElementById('fact-tipo').value;
-  const cuit = document.getElementById('fact-cuit').value.trim();
+  const cuitCliente = document.getElementById('fact-cuit').value.trim();
   const condicion = document.getElementById('fact-condicion-iva').value;
   const conIva = document.getElementById('fact-check-iva').checked;
+  const puntoVenta = 1; // TODO: hacer configurable
 
-  if (tipo === 'A' && !cuit) {
+  if (tipo === 'A' && !cuitCliente) {
     showStatus('status-facturar', 'Ingresá el CUIT del cliente para Factura A.', 'err');
     return;
   }
 
-  const iva = conIva ? Math.round(subtotal * 0.21) : 0;
-  const total = subtotal + iva;
+  const btn = document.querySelector('#modal-facturar .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Facturando...'; }
+  showStatus('status-facturar', 'Conectando con ARCA...', 'loading');
 
-  // Por ahora mostramos confirmación — integración AFIP SDK próximamente
-  showStatus('status-facturar', `✓ Factura ${tipo} por $${Math.round(total).toLocaleString('es-AR')} lista para emitir. Integración AFIP próximamente.`, 'ok');
+  try {
+    const session = await supabaseAuth.auth.getSession();
+    const userEmail = session?.data?.session?.user?.email || '';
+
+    const res = await fetch('/api/facturar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo,
+        cuitCliente,
+        condicionIva: condicion,
+        impTotal: subtotal,
+        conIva,
+        puntoVenta,
+        pedidoId: id,
+        userEmail
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) throw new Error(data.error || 'Error al facturar');
+
+    showStatus('status-facturar',
+      `✓ Factura ${data.tipo} N° ${data.nroComprobante} emitida. CAE: ${data.CAE} · Vto: ${data.CAEFchVto}`,
+      'ok'
+    );
+    if (btn) btn.textContent = '✓ Facturado';
+
+  } catch(e) {
+    showStatus('status-facturar', 'Error: ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y facturar'; }
+  }
 }
 
 
