@@ -40,7 +40,9 @@ export default async function handler(req, res) {
     const base    = Math.round(parseFloat(impTotal) * 100) / 100;
     const ivaAmt  = conIva ? Math.round(base * 21) / 100 : 0;
     const total   = Math.round((base + ivaAmt) * 100) / 100;
-    const neto    = base;
+    // Si no hay IVA: ImpNeto=0, ImpOpEx=base (exento). Si hay IVA: ImpNeto=base, ImpOpEx=0
+    const neto    = conIva ? base : 0;
+    const opEx    = conIva ? 0 : base;
 
     // Tipo de comprobante y receptor
     const cbteTipo  = tipo === 'A' ? 1 : 6;
@@ -67,7 +69,7 @@ export default async function handler(req, res) {
       ImpTotal:  total,
       ImpTotConc: 0,
       ImpNeto:   neto,
-      ImpOpEx:   0,
+      ImpOpEx:   opEx,
       ImpIVA:    ivaAmt,
       ImpTrib:   0,
       MonId:     'PES',
