@@ -1,7 +1,4 @@
-import { execSync } from 'node:child_process';
-import { writeFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import forge from 'node-forge';
 
 const CUIT      = process.env.AFIP_CUIT;
 const CERT_RAW  = process.env.AFIP_CERT || '';
@@ -41,23 +38,26 @@ function buildTRA() {
 }
 
 function signTRA(traXml, certPem, keyPem) {
-  const id  = Date.now();
-  const tra  = join(tmpdir(), `tra_${id}.xml`);
-  const cert = join(tmpdir(), `cert_${id}.pem`);
-  const key  = join(tmpdir(), `key_${id}.pem`);
-  writeFileSync(tra, traXml);
-  writeFileSync(cert, certPem);
-  writeFileSync(key, keyPem);
-  let cms;
-  try {
-    cms = execSync(
-      `openssl cms -sign -in "${tra}" -signer "${cert}" -inkey "${key}" -nodetach -outform DER 2>/dev/null`,
-      { maxBuffer: 2 * 1024 * 1024 }
-    );
-  } finally {
-    [tra, cert, key].forEach(f => { try { unlinkSync(f); } catch(e){} });
-  }
-  return cms.toString('base64');
+  const cert       = forge.pki.certificateFromPem(certPem);
+  const privateKey = forge.pki.privateKeyFromPem(keyPem);
+
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(traXml, 'utf8');
+  p7.addCertificate(cert);
+  p7.addSigner({
+    key:         privateKey,
+    certificate: cert,
+    digestAlgorithm: forge.pki.oids.sha256,
+    authenticatedAttributes: [
+      { type: forge.pki.oids.contentType,   value: forge.pki.oids.data },
+      { type: forge.pki.oids.messageDigest },
+      { type: forge.pki.oids.signingTime,   value: new Date() }
+    ]
+  });
+  p7.sign();
+
+  const der = forge.asn1.toDer(p7.toAsn1()).getBytes();
+  return forge.util.encode64(der);
 }
 
 async function getTA(cert, key) {
@@ -72,14 +72,18 @@ async function getTA(cert, key) {
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-  const r   = await fetch(WSAA_URL, { method:'POST', headers:{'Content-Type':'text/xml;charset=utf-8','SOAPAction':'"loginCms"'}, body: soap });
+  const r   = await fetch(WSAA_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/xml;charset=utf-8', 'SOAPAction': '"loginCms"' },
+    body: soap
+  });
   const xml = await r.text();
-  console.log('WSAA:', xml.substring(0, 400));
+  console.log('WSAA response:', xml.substring(0, 500));
 
   const ret   = getTag(xml, 'loginCmsReturn');
   const token = getTag(ret, 'token');
   const sign  = getTag(ret, 'sign');
-  if (!token) throw new Error('WSAA sin token. Resp: ' + xml.substring(0, 300));
+  if (!token) throw new Error('WSAA sin token. Resp: ' + xml.substring(0, 400));
   return { token, sign };
 }
 
@@ -101,7 +105,9 @@ async function ultimoComprobante(token, sign, ptoVta, cbteTipo) {
 }
 
 async function solicitarCAE(token, sign, ptoVta, cbteTipo, nro, docTipo, docNro, total, ivaAmt, neto, condIvaId, fecha) {
-  const ivaXml = ivaAmt > 0 ? `<ar:Iva><ar:AlicIva><ar:Id>5</ar:Id><ar:BaseImp>${neto.toFixed(2)}</ar:BaseImp><ar:Importe>${ivaAmt.toFixed(2)}</ar:Importe></ar:AlicIva></ar:Iva>` : '';
+  const ivaXml = ivaAmt > 0
+    ? `<ar:Iva><ar:AlicIva><ar:Id>5</ar:Id><ar:BaseImp>${neto.toFixed(2)}</ar:BaseImp><ar:Importe>${ivaAmt.toFixed(2)}</ar:Importe></ar:AlicIva></ar:Iva>`
+    : '';
   const soap = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/">
   <soapenv:Header/>
@@ -151,7 +157,7 @@ export default async function handler(req, res) {
     const CERT = CERT_RAW.replace(/\\n/g, '\n').trim();
     const KEY  = KEY_RAW.replace(/\\n/g, '\n').trim();
     console.log('CERT ok:', CERT.startsWith('-----BEGIN CERTIFICATE'));
-    console.log('KEY ok:', KEY.startsWith('-----BEGIN RSA PRIVATE KEY'));
+    console.log('KEY ok:', KEY.startsWith('-----BEGIN RSA PRIVATE KEY') || KEY.startsWith('-----BEGIN PRIVATE KEY'));
 
     const ptoVta    = 10;
     const base      = parseFloat(impTotal);
@@ -168,8 +174,9 @@ export default async function handler(req, res) {
     const { token, sign } = await getTA(CERT, KEY);
     const lastNro  = await ultimoComprobante(token, sign, ptoVta, cbteTipo);
     const nextNro  = lastNro + 1;
-    const caeXml   = await solicitarCAE(token, sign, ptoVta, cbteTipo, nextNro, docTipo, docNro, total, ivaAmt, neto, condIvaId, fecha);
+    console.log('Next nro:', nextNro);
 
+    const caeXml   = await solicitarCAE(token, sign, ptoVta, cbteTipo, nextNro, docTipo, docNro, total, ivaAmt, neto, condIvaId, fecha);
     const resultado = getTag(caeXml, 'Resultado');
     if (resultado !== 'A') {
       const msgs = getTags(caeXml, 'Msg');
@@ -178,8 +185,8 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      CAE: getTag(caeXml, 'CAE'),
-      CAEFchVto: getTag(caeXml, 'CAEFchVto'),
+      CAE:           getTag(caeXml, 'CAE'),
+      CAEFchVto:     getTag(caeXml, 'CAEFchVto'),
       nroComprobante: nextNro,
       tipo, total, puntoVenta: ptoVta
     });
