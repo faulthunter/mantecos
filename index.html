@@ -6,7 +6,6 @@
 <title>Sistema Manteco</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
   --bg: #FAF8F4;
@@ -201,70 +200,6 @@ canvas { width: 100% !important; }
 .pin-key:disabled { opacity: 0.35; cursor: default; }
 </style>
 <style>
-/* ── MÓDULOS ── */
-.modulo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 16px; text-align: center; cursor: pointer; font-family: inherit; position: relative; transition: transform 0.1s, box-shadow 0.1s; -webkit-tap-highlight-color: transparent; }
-.modulo-card:active { transform: scale(0.97); box-shadow: 0 2px 12px rgba(196,105,42,0.15); }
-.modulo-icon { font-size: 40px; margin-bottom: 10px; }
-.modulo-nombre { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.modulo-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
-.modulo-wip { opacity: 0.6; }
-.modulo-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.05em; }
-
-/* ── VISTA LISTA KANBAN ── */
-.lista-pedido-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.lista-pedido-row:last-child { border-bottom: none; }
-.lista-pedido-row:active { background: var(--accent-light); }
-.lista-cliente { font-size: 15px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lista-fecha { font-size: 12px; color: var(--muted); white-space: nowrap; }
-.lista-total { font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; }
-.lista-acciones { display: flex; gap: 4px; flex-shrink: 0; }
-.lista-btn { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 12px; color: var(--muted); cursor: pointer; font-family: inherit; }
-
-/* ── COSTEO ── */
-.costeo-tabs { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; }
-.costeo-tab { flex:1; padding: 8px 4px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; font-family: inherit; text-align: center; min-width: 60px; }
-.costeo-tab.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
-.ing-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.ing-row:last-child { border-bottom: none; }
-.receta-card-costeo { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
-.margen-ok { background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.margen-warn { background: #FEF9C3; color: #854D0E; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.margen-bad { background: #FEE2E2; color: #991B1B; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.receta-ing-row { display: grid; grid-template-columns: 1fr 80px 32px; gap: 6px; align-items: center; margin-bottom: 6px; }
-/* Recetas list */
-.receta-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
-.receta-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px; cursor: pointer; }
-.receta-header h3 { font-size: 15px; font-weight: 600; margin: 0; }
-.receta-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
-.receta-body { padding: 0 14px 14px; border-top: 1px solid var(--border); display: none; }
-.receta-body.open { display: block; }
-.receta-ing-detail { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: var(--muted); }
-.receta-ing-detail span:last-child { color: var(--text); font-weight: 500; }
-.receta-actions { display: flex; gap: 8px; margin-top: 10px; }
-/* Ingredientes */
-.ingrediente-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.ingrediente-row:last-child { border-bottom: none; }
-.ing-nombre { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; }
-.ing-unit { font-size: 11px; color: var(--muted); }
-.ing-precio-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.ing-precio-input { width: 90px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; text-align: right; background: var(--bg); font-family: inherit; color: var(--text); }
-/* Costos */
-.costo-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
-.costo-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.costo-nombre { font-size: 15px; font-weight: 600; }
-.costo-kpi { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.costo-kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.costo-kpi-val { font-size: 16px; font-weight: 700; }
-.costo-rendimiento { font-size: 12px; color: var(--muted); }
-.costo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-/* Buttons */
-.btn-sm { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; color: var(--text); cursor: pointer; font-family: inherit; }
-.btn-sm:active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
-.btn-ghost { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: none; font-size: 13px; color: var(--muted); cursor: pointer; font-family: inherit; }
-.btn-ghost:active { background: var(--error-bg); color: var(--error); border-color: var(--error); }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.empty-msg { font-size: 13px; color: var(--muted); text-align: center; padding: 16px; }
-
 /* ── MENÚ CONFIG DESPLEGABLE ── */
 .config-menu { position: relative; margin-top: 16px; margin-bottom: 4px; }
 .sub-page { display: none; }
@@ -280,28 +215,32 @@ canvas { width: 100% !important; }
 </head>
 <body>
 
-<!-- ── LOGIN SCREEN ─────────────────────────────────────────── -->
+<!-- ── PIN SCREEN ─────────────────────────────────────────── -->
 <div class="pin-overlay" id="pin-overlay">
   <div class="pin-logo">🥐</div>
   <div class="pin-title">Sistema Manteco</div>
-  <div class="pin-sub">La Chica Manteca · Laminados</div>
-  <button id="btn-google-login" onclick="loginConGoogle()" style="
-    margin-top:32px;
-    display:flex;align-items:center;gap:12px;
-    padding:14px 28px;
-    background:white;
-    border:1px solid #E0E0E0;
-    border-radius:12px;
-    font-size:16px;font-weight:500;
-    color:#3C4043;
-    cursor:pointer;
-    font-family:inherit;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
-  ">
-    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-    Iniciar sesión con Google
-  </button>
-  <div class="pin-error-msg" id="login-error"></div>
+  <div class="pin-sub" id="pin-sub">Ingresá tu PIN para continuar</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-grid">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key empty"></button>
+    <button class="pin-key" onclick="pinPress('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-error-msg" id="pin-error"></div>
 </div>
 
 <div class="loading-overlay" id="loading-overlay">
@@ -424,7 +363,7 @@ canvas { width: 100% !important; }
   </div>
 </div>
 
-<header id="main-header">
+<header>
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div>
       <h1>🥐 Sistema Manteco</h1>
@@ -433,86 +372,60 @@ canvas { width: 100% !important; }
         <p id="header-sub" style="margin-top:0">Conectando...</p>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <div style="text-align:right;color:white;line-height:1.3">
-        <div id="clock-dia" style="font-size:13px;opacity:0.75;text-transform:capitalize"></div>
-        <div id="clock-num" style="font-size:22px;font-weight:700;letter-spacing:-0.5px"></div>
-        <div id="clock-hora" style="font-size:13px;opacity:0.75"></div>
-      </div>
-      <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
+    <div style="text-align:right;color:white;line-height:1.3">
+      <div id="clock-dia" style="font-size:13px;opacity:0.75;text-transform:capitalize"></div>
+      <div id="clock-num" style="font-size:22px;font-weight:700;letter-spacing:-0.5px"></div>
+      <div id="clock-hora" style="font-size:13px;opacity:0.75"></div>
+    </div>
+  </div>
+  <!-- Barra de estado -->
+  <div style="display:flex;margin-top:12px;border-top:1px solid rgba(255,255,255,0.2);padding-top:12px;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Nuevos</div>
+      <div id="badge-nuevos" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div>
+      <div id="badge-medialunas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Croissants</div>
+      <div id="badge-croissants" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div>
+      <div id="badge-panchoco" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div>
+      <div id="badge-trenzas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div>
+      <div id="badge-hojaldres" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div>
+      <div id="badge-palmeritas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
+    </div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div>
+      <div id="badge-danesas" style="font-size:26px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div>
     </div>
   </div>
 </header>
 
-<!-- Header producción con badges (solo visible en módulo producción) -->
-<div id="header-produccion" style="display:none;background:var(--accent);padding:10px 20px 12px">
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Nuevos</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div><div id="badge-medialunas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Croissants</div><div id="badge-croissants" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div><div id="badge-panchoco" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div><div id="badge-trenzas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div><div id="badge-hojaldres" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div><div id="badge-palmeritas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div><div id="badge-danesas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-  </div>
-</div>
-
-<!-- Nav módulo (visible dentro de cada módulo) -->
-<div id="modulo-nav" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:none;align-items:center;gap:12px;position:sticky;top:0;z-index:50">
-  <button onclick="volverInicio()" style="padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit;flex-shrink:0">← Inicio</button>
-  <nav class="nav" id="modulo-tabs" style="flex:1;border:none;position:static;overflow-x:auto"></nav>
-</div>
-
-<!-- ── PANTALLA DE INICIO ──────────────────────────────── -->
-<div id="pantalla-inicio" style="display:none;padding:24px 16px;max-width:520px;margin:0 auto">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
-    <button class="modulo-card" onclick="abrirModulo('produccion')">
-      <div class="modulo-icon">🏭</div>
-      <div class="modulo-nombre">Producción</div>
-      <div class="modulo-desc">Pedidos, Kanban y totales</div>
-    </button>
-    <button class="modulo-card" onclick="abrirModulo('costeo')">
-      <div class="modulo-icon">🧁</div>
-      <div class="modulo-nombre">Costeo</div>
-      <div class="modulo-desc">Recetas, ingredientes y márgenes</div>
-    </button>
-    <button class="modulo-card" onclick="abrirModulo('config')">
-      <div class="modulo-icon">⚙️</div>
-      <div class="modulo-nombre">Configuración</div>
-      <div class="modulo-desc">Estadísticas, productos y clientes</div>
-    </button>
-    <button class="modulo-card modulo-wip" onclick="abrirModulo('facturacion')">
-      <div class="modulo-icon">🧾</div>
-      <div class="modulo-nombre">Facturación</div>
-      <div class="modulo-desc">Próximamente</div>
-      <div class="modulo-badge">WIP</div>
-    </button>
-  </div>
-</div>
-
-<nav class="nav" id="nav-produccion" style="display:none">
+<nav class="nav">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
-</nav>
-
-<nav class="nav" id="nav-costeo-tabs" style="display:none">
-  <button class="nav-btn active" id="nav-costeo-main" onclick="showPage('costeo'); initCosteo()">🧁 Costeo</button>
-</nav>
-
-<nav class="nav" id="nav-config-tabs" style="display:none">
-  <button class="nav-btn active" id="nav-config" onclick="showPage('config')">⚙️ Config</button>
-</nav>
-
-<nav class="nav" id="nav-facturacion-tabs" style="display:none">
-  <button class="nav-btn active" id="nav-facturacion" onclick="showPage('facturacion')">🧾 Facturación</button>
+  <button class="nav-btn"        id="nav-config" onclick="showPage('config')">⚙️ Config</button>
 </nav>
 
 <!-- ── PÁGINA NUEVO PEDIDO ─────────────────────────────────── -->
@@ -592,11 +505,7 @@ canvas { width: 100% !important; }
 <div class="page" id="page-kanban">
   <div class="kanban-header" style="margin-top:16px">
     <h2>Estado de pedidos</h2>
-    <div style="display:flex;gap:8px">
-      <button class="btn-refresh" id="btn-vista-toggle" onclick="toggleVistaKanban()">☰ Lista</button>
-      <button class="btn-refresh" onclick="generarPDFProduccion()">📦 PDF Producción</button>
-      <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
-    </div>
+    <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <button class="period-btn"        id="filtro-todos"        onclick="setFiltroSemana('todos',this)">Todos</button>
@@ -627,192 +536,6 @@ canvas { width: 100% !important; }
   </div>
 </div>
 
-<!-- ── PÁGINA COSTEO ───────────────────────────────────── -->
-<div class="page" id="page-costeo">
-  <div style="margin-top:16px">
-    <div class="costeo-tabs">
-      <button class="costeo-tab active" id="ctab-ingredientes" onclick="showCosteoTab('ingredientes')">🧂 Ingredientes</button>
-      <button class="costeo-tab" id="ctab-recetas"            onclick="showCosteoTab('recetas')">📖 Recetas</button>
-      <button class="costeo-tab" id="ctab-costos"             onclick="showCosteoTab('costos')">💰 Costos</button>
-      <button class="costeo-tab" id="ctab-ganancias"          onclick="showCosteoTab('ganancias')">📈 Ganancia</button>
-    </div>
-
-    <!-- TAB: INGREDIENTES -->
-    <div id="ctab-page-ingredientes">
-      <div class="card" style="margin-top:12px">
-        <div class="card-title">Nuevo ingrediente</div>
-        <label style="margin-top:0">Nombre</label>
-        <input type="text" id="nuevo-ing-nombre" placeholder="Ej: Harina 000" />
-        <div class="grid2" style="margin-top:12px">
-          <div>
-            <label>Precio</label>
-            <input type="number" id="nuevo-ing-precio" placeholder="0" min="0" step="any" />
-          </div>
-          <div>
-            <label>Unidad</label>
-            <select id="nuevo-ing-unidad">
-              <option value="kg">por kg</option>
-              <option value="lt">por litro</option>
-              <option value="unidad">por unidad</option>
-              <option value="docena">por docena</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn-primary" style="margin-top:14px" id="btn-nuevo-ingrediente" onclick="guardarIngrediente()">+ Agregar ingrediente</button>
-        <div class="status" id="status-ingrediente"></div>
-      </div>
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div class="card-title" style="margin-bottom:0">Ingredientes cargados</div>
-          <span style="font-size:12px;color:var(--muted)" id="ing-count">0 ingredientes</span>
-        </div>
-        <div id="lista-ingredientes"><div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Cargando...</div></div>
-      </div>
-    </div>
-
-    <!-- TAB: RECETAS -->
-    <div id="ctab-page-recetas" style="display:none">
-      <div style="margin-top:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:16px;font-weight:600">Recetas</span>
-        <button class="btn-refresh" onclick="abrirNuevaReceta()">+ Nueva receta</button>
-      </div>
-      <div id="lista-recetas"><div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Cargando...</div></div>
-    </div>
-
-    <!-- TAB: COSTOS -->
-    <div id="ctab-page-costos" style="display:none">
-      <div class="card" style="margin-top:12px">
-        <div class="card-title">Costos fijos del mes</div>
-        <div class="grid2">
-          <div><label style="margin-top:0">Sueldos</label><input type="number" id="cf-sueldos" placeholder="0" min="0" oninput="actualizarCostoFijoPreview()" /></div>
-          <div><label style="margin-top:0">Alquiler</label><input type="number" id="cf-alquiler" placeholder="0" min="0" oninput="actualizarCostoFijoPreview()" /></div>
-          <div><label style="margin-top:0">Servicios</label><input type="number" id="cf-servicios" placeholder="0" min="0" oninput="actualizarCostoFijoPreview()" /></div>
-        </div>
-        <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin:12px 0;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;color:var(--muted)">Costo fijo por unidad este mes</span>
-          <span style="font-size:18px;font-weight:700;color:var(--accent)" id="cf-por-unidad">$—</span>
-        </div>
-        <button class="btn-primary" id="btn-guardar-cf" onclick="guardarCostosFijos()">Guardar costos fijos</button>
-        <div class="status" id="status-cf"></div>
-      </div>
-      <div id="lista-costos"><div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Cargá recetas para ver los costos.</div></div>
-    </div>
-
-    <!-- TAB: GANANCIAS -->
-    <div id="ctab-page-ganancias" style="display:none">
-      <div class="card" style="margin-top:12px;padding:12px 14px">
-        <div class="card-title" style="margin-bottom:10px">Período</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <button class="period-btn active" onclick="setGanPeriodo(7,this)">7 días</button>
-          <button class="period-btn" onclick="setGanPeriodo(30,this)">30 días</button>
-          <button class="period-btn" onclick="setGanPeriodMes(this)">Este mes</button>
-          <button class="period-btn" onclick="setGanPeriodo(90,this)">3 meses</button>
-          <button class="period-btn" onclick="setGanPeriodoAnio(this)">Este año</button>
-        </div>
-        <div class="grid2">
-          <div><label style="margin-top:0">Desde</label><input type="date" id="gan-fecha-desde" onchange="renderGanancias()" /></div>
-          <div><label style="margin-top:0">Hasta</label><input type="date" id="gan-fecha-hasta" onchange="renderGanancias()" /></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="gan-kpis"></div>
-      <div id="lista-ganancias"><div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Seleccioná un período.</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal nueva/editar receta -->
-<div class="modal-overlay" id="modal-receta">
-  <div class="modal" style="max-height:90vh">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-receta-titulo">Nueva receta</span>
-      <button class="modal-close" onclick="cerrarModalReceta()">✕</button>
-    </div>
-    <label style="margin-top:0">Nombre de la receta</label>
-    <input type="text" id="receta-nombre" placeholder="Ej: Masa de medialunas" />
-    <label>Producto que genera</label>
-    <select id="receta-producto-sel">
-      <option value="">— Seleccionar —</option>
-    </select>
-    <label>Rendimiento (unidades que salen)</label>
-    <input type="number" id="receta-rendimiento" placeholder="Ej: 35" min="1" />
-    <div style="margin-top:16px;margin-bottom:6px;font-size:13px;font-weight:600">Ingredientes de la masa</div>
-    <div id="receta-ing-container"></div>
-    <button class="btn-add-item" onclick="addRecetaIngrediente()" style="margin-top:8px">+ Agregar ingrediente</button>
-    <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;display:flex;justify-content:space-between">
-      <div>
-        <div style="font-size:11px;color:var(--muted)">Costo masa</div>
-        <div style="font-size:15px;font-weight:700;color:var(--accent)" id="preview-costo-masa">$—</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--muted)">Costo por unidad</div>
-        <div style="font-size:15px;font-weight:700;color:var(--accent)" id="preview-costo-unit">$—</div>
-      </div>
-    </div>
-    <button class="btn-primary" style="margin-top:16px" id="btn-guardar-receta" onclick="guardarReceta()">Guardar receta</button>
-    <div class="status" id="status-receta"></div>
-  </div>
-</div>
-
-<!-- Modal confirmar eliminar receta -->
-<div class="modal-overlay" id="modal-confirmar-eliminar">
-  <div class="modal" style="max-height:40vh">
-    <div class="modal-header">
-      <span class="modal-title">Eliminar receta</span>
-      <button class="modal-close" onclick="document.getElementById('modal-confirmar-eliminar').classList.remove('open')">✕</button>
-    </div>
-    <p style="font-size:14px;color:var(--muted);margin-bottom:16px">¿Estás seguro que querés eliminar esta receta? Esta acción no se puede deshacer.</p>
-    <button class="btn-danger" id="btn-confirmar-eliminar-receta" onclick="confirmarEliminarReceta()">Eliminar receta</button>
-  </div>
-</div>
-
-<!-- ── PÁGINA FACTURACIÓN ─────────────────────────────────── -->
-<div class="page" id="page-facturacion">
-  <div style="margin-top:16px">
-
-    <!-- Filtro por fecha -->
-    <div class="card">
-      <div class="card-title">Filtrar pedidos</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="date" id="fact-desde" style="flex:1" />
-        <span style="color:var(--muted);font-size:13px">→</span>
-        <input type="date" id="fact-hasta" style="flex:1" />
-        <button class="btn-primary" onclick="cargarPedidosFacturacion()" style="width:auto;padding:10px 16px">Buscar</button>
-      </div>
-      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        <button class="period-btn active" id="fact-btn-mes" onclick="setFactPeriodo('mes',this)">Este mes</button>
-        <button class="period-btn" onclick="setFactPeriodo('7d',this)">7 días</button>
-        <button class="period-btn" onclick="setFactPeriodo('30d',this)">30 días</button>
-        <button class="period-btn" onclick="setFactPeriodo('todos',this)">Todos</button>
-      </div>
-    </div>
-
-    <!-- Resumen -->
-    <div id="fact-resumen" style="display:none;background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
-      <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
-      <span style="font-size:15px;font-weight:700;color:var(--accent)" id="fact-resumen-total">$0</span>
-    </div>
-
-    <!-- Listado -->
-    <div id="lista-facturacion">
-      <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">
-        Seleccioná un período para ver los pedidos.
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Modal facturar pedido -->
-<div class="modal-overlay" id="modal-facturar">
-  <div class="modal" style="max-height:85vh">
-    <div class="modal-header">
-      <span class="modal-title">Facturar pedido</span>
-      <button class="modal-close" onclick="cerrarModalFacturar()">✕</button>
-    </div>
-    <div id="modal-facturar-body"></div>
-  </div>
-</div>
-
 <!-- ── PÁGINA CONFIGURACIÓN ───────────────────────────────── -->
 <div class="page" id="page-config">
   <div style="margin-top:16px">
@@ -832,6 +555,7 @@ canvas { width: 100% !important; }
         <button class="config-option" onclick="selectConfig('clientes', '👥 Clientes')">👥 Clientes</button>
         <button class="config-option" onclick="selectConfig('cobrados', '✅ Pedidos cobrados')">✅ Pedidos cobrados</button>
         <button class="config-option" onclick="imprimirPlanillaStock()">📋 Imprimir planilla de stock</button>
+        <button class="config-option" onclick="window.open('https://faulthunter.github.io/costeomanteco/', '_blank')">🧮 Costeo de recetas</button>
       </div>
     </div>
 
@@ -851,8 +575,8 @@ canvas { width: 100% !important; }
           <input type="date" id="stats-desde" />
           <span style="color:var(--muted);font-size:13px">→</span>
           <input type="date" id="stats-hasta" />
+          <button class="btn-primary" onclick="applyCustomRange()">Ver</button>
         </div>
-        <button class="btn-primary" id="btn-aplicar-stats" onclick="aplicarFiltroStats()" style="margin-top:10px;padding:10px 16px;font-size:14px">Aplicar filtro</button>
         <div style="font-size:12px;color:var(--muted)" id="stats-period-label">Últimos 7 días</div>
       </div>
       <div class="kpi-grid">
@@ -865,7 +589,7 @@ canvas { width: 100% !important; }
       <div class="card"><div class="card-title">Ventas por producto</div><div id="ranking-productos"><div class="empty-stats">Sin datos</div></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div class="chart-container" style="height:220px"><canvas id="chart-productos"></canvas></div></div>
       <div class="card"><div class="card-title">Clientes top</div><div id="ranking-clientes"><div class="empty-stats">Sin datos</div></div></div>
-      
+      <div class="card"><div class="card-title">Pedidos por estado</div><div style="display:flex;gap:12px;align-items:center"><div style="flex:1;max-width:140px;max-height:140px"><canvas id="chart-estados"></canvas></div><div id="estados-leyenda" style="flex:1;font-size:13px"></div></div></div>
       <div class="card"><div class="card-title">Actividad por día de semana</div><div class="chart-container" style="height:140px"><canvas id="chart-diasemana"></canvas></div></div>
 
       <!-- Ventas por cliente -->
@@ -932,36 +656,10 @@ canvas { width: 100% !important; }
 
 <script>
 // API y PIN se cargan desde el servidor al iniciar
-const SUPA_URL = 'https://zuuvvhhpcdngvauonxms.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
-
-// Cliente Auth de Supabase
-const supabaseAuth = supabase.createClient(SUPA_URL, SUPA_KEY);
-
-const supa = {
-  headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-
-  async get(table, query = '') {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers: this.headers });
-    return r.json();
-  },
-
-  async post(table, body) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: this.headers, body: JSON.stringify(body) });
-    return r.json();
-  },
-
-  async patch(table, query, body) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: this.headers, body: JSON.stringify(body) });
-    return r.json();
-  },
-
-  async delete(table, query) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: { ...this.headers, 'Prefer': 'return=minimal' } });
-    return r.ok;
-  }
-};
+const API = 'https://script.google.com/macros/s/AKfycbz-ocI7N1hq78_mxEJ8Chw5Or3yY3wZ6sBSBVyKMEbAH7eIKMfJQrmP4af3yyvqnU4G/exec';
 // PIN ofuscado — no es texto plano
+const _p = [50,54,49,55].map(c=>String.fromCharCode(c)).join('');
+
 // ── PROTECCIÓN GLOBAL DE BOTONES ─────────────────────────────
 // Evita doble tap en cualquier botón de la app
 document.addEventListener('click', function(e) {
@@ -1000,65 +698,14 @@ let ultimoPedido = null;
 let todosPedidos = [];
 let pedidoEnEdicion = null;
 
-// ── MÓDULOS ──────────────────────────────────────────────────
-let moduloActivo = null;
-
-function mostrarInicio() {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('pantalla-inicio').style.display = 'block';
-  document.getElementById('nav-produccion').style.display = 'none';
-  document.getElementById('nav-costeo-tabs').style.display = 'none';
-  document.getElementById('nav-config-tabs').style.display = 'none';
-  document.getElementById('nav-facturacion-tabs').style.display = 'none';
-  document.getElementById('header-produccion').style.display = 'none';
-  moduloActivo = null;
-}
-
-function abrirModulo(modulo) {
-  moduloActivo = modulo;
-  document.getElementById('pantalla-inicio').style.display = 'none';
-  document.getElementById('nav-produccion').style.display = 'none';
-  document.getElementById('nav-costeo-tabs').style.display = 'none';
-  document.getElementById('nav-config-tabs').style.display = 'none';
-  document.getElementById('nav-facturacion-tabs').style.display = 'none';
-  document.getElementById('header-produccion').style.display = 'none';
-
-  if (modulo === 'produccion') {
-    document.getElementById('nav-produccion').style.display = 'flex';
-    document.getElementById('header-produccion').style.display = 'block';
-    showPage('nuevo');
-  } else if (modulo === 'costeo') {
-    document.getElementById('nav-costeo-tabs').style.display = 'flex';
-    showPage('costeo');
-    initCosteo();
-  } else if (modulo === 'config') {
-    document.getElementById('nav-config-tabs').style.display = 'flex';
-    showPage('config');
-  } else if (modulo === 'facturacion') {
-    document.getElementById('nav-facturacion-tabs').style.display = 'flex';
-    showPage('facturacion');
-    // Setear período por defecto (este mes) y cargar
-    const hoy = new Date();
-    const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    document.getElementById('fact-desde').value = primero.toISOString().split('T')[0];
-    document.getElementById('fact-hasta').value = hoy.toISOString().split('T')[0];
-    cargarPedidosFacturacion();
-  }
-}
-
-function volverInicio() {
-  mostrarInicio();
-}
-
 // ── NAVEGACIÓN ────────────────────────────────────────────────
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  const page = document.getElementById('page-' + name);
-  if (page) page.classList.add('active');
-  const navBtn = document.getElementById('nav-' + name);
-  if (navBtn) navBtn.classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
   if (name === 'config') {
+    // Cerrar dropdown y resetear label al entrar a config
     document.getElementById('config-dropdown').classList.remove('open');
     document.getElementById('config-menu-label').textContent = '⚙️ Seleccioná una opción';
     document.getElementById('config-menu-arrow').textContent = '▾';
@@ -1074,9 +721,9 @@ async function refreshConfig() {
   showLoading('Actualizando datos...');
   try {
     const [c, p, pedidos] = await Promise.all([
-      apiGetClientes(),
-      apiGetProductos(),
-      apiGetPedidos()
+      apiFetch({ action: 'getClientes' }),
+      apiFetch({ action: 'getProductos' }),
+      apiFetch({ action: 'getPedidos' })
     ]);
     clientes      = Array.isArray(c) ? c : [];
     productos     = Array.isArray(p) ? p : [];
@@ -1102,7 +749,7 @@ async function refreshConfig() {
     }
 
     actualizarBadges(todosPedidos);
-    document.getElementById('header-sub').textContent = 'Supabase · ' + clientes.length + ' clientes · ' + productos.length + ' productos';
+    document.getElementById('header-sub').textContent = 'DB OK · ' + clientes.length + ' clientes · ' + productos.length + ' productos';
   } catch(e) {
     alert('Error al actualizar: ' + e.message);
   }
@@ -1139,7 +786,7 @@ async function desarchivarPedido(id) {
   if (!confirm('¿Volver este pedido a estado Nuevo?')) return;
   showLoading('Desarchivando...');
   try {
-    const res = await apiActualizarEstado(id, 'Nuevo');
+    const res = await apiFetch({ action: 'actualizarEstado', id, estado: 'Nuevo' });
     if (res.error) throw new Error(res.error);
     // Actualizar local
     const p = todosPedidos.find(p => p.id === id);
@@ -1337,85 +984,30 @@ function hideLoading() {
 }
 function showStatus(elId, msg, type) {
   const el = document.getElementById(elId);
-  if (!el) return;
   el.textContent = msg;
   el.className = 'status ' + type;
   if (type === 'ok') setTimeout(() => { el.className = 'status'; }, 2500);
 }
 
-// ── API SUPABASE ──────────────────────────────────────────────
-async function apiGetClientes() {
-  return await supa.get('clientes', 'order=nombre');
-}
-
-async function apiGetProductos() {
-  return await supa.get('productos', 'order=nombre');
-}
-
-async function apiGetPedidos() {
-  const [pedidos, items] = await Promise.all([
-    supa.get('pedidos', 'order=id'),
-    supa.get('items_pedido', 'order=pedido_id')
-  ]);
-  const itemsMap = {};
-  items.forEach(it => {
-    if (!itemsMap[it.pedido_id]) itemsMap[it.pedido_id] = [];
-    itemsMap[it.pedido_id].push({ nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio) });
-  });
-  return pedidos.map(p => ({ ...p, total: Number(p.total), envio: Number(p.envio), items: itemsMap[p.id] || [] }));
-}
-
-async function apiNuevoPedido(cliente, fecha, estado, observaciones, items, envio) {
-  const total = items.reduce((s, i) => s + i.precio * i.cantidad, 0) + (envio || 0);
-  const id = 'P' + Date.now();
-  await supa.post('pedidos', { id, cliente, fecha, estado, observaciones, total, envio: envio || 0 });
-  if (items.length > 0) await Promise.all(items.map(it => supa.post('items_pedido', { pedido_id: id, nombre: it.nombre, cantidad: it.cantidad, precio: it.precio })));
-  return { ok: true, idPedido: id, total };
-}
-
-async function apiActualizarEstado(id, estado) {
-  await supa.patch('pedidos', `id=eq.${id}`, { estado });
-  return { ok: true };
-}
-
-async function apiEliminarPedido(id) {
-  await supa.delete('items_pedido', `pedido_id=eq.${id}`);
-  await supa.delete('pedidos', `id=eq.${id}`);
-  return { ok: true };
-}
-
-async function apiEditarPedido(id, cliente, fecha, estado, observaciones, items, envio, iva) {
-  const base  = items.reduce((s, i) => s + parseFloat(i.precio) * parseInt(i.cantidad), 0) + (envio || 0);
-  const total = iva ? Math.round(base * 1.21) : base;
-  await supa.patch('pedidos', `id=eq.${id}`, { cliente, fecha, estado, observaciones, total, envio: envio || 0 });
-  await supa.delete('items_pedido', `pedido_id=eq.${id}`);
-  if (items.length > 0) await Promise.all(items.map(it => supa.post('items_pedido', { pedido_id: id, nombre: it.nombre, cantidad: parseInt(it.cantidad), precio: parseFloat(it.precio) })));
-  return { ok: true, total };
-}
-
-async function apiAgregarProducto(nombre, precio) {
-  await supa.post('productos', { nombre, precio });
-  return { ok: true };
-}
-
-async function apiEditarProducto(nombre, precio) {
-  await supa.patch('productos', `nombre=eq.${encodeURIComponent(nombre)}`, { precio });
-  return { ok: true };
-}
-
-async function apiEliminarProducto(nombre) {
-  await supa.delete('productos', `nombre=eq.${encodeURIComponent(nombre)}`);
-  return { ok: true };
-}
-
-async function apiAgregarCliente(nombre, whatsapp, direccion) {
-  await supa.post('clientes', { nombre, whatsapp, direccion });
-  return { ok: true };
-}
-
-async function apiEliminarCliente(nombre) {
-  await supa.delete('clientes', `nombre=eq.${encodeURIComponent(nombre)}`);
-  return { ok: true };
+// ── API ───────────────────────────────────────────────────────
+async function apiFetch(params, reintentos = 2) {
+  const qs = new URLSearchParams(params).toString();
+  for (let intento = 1; intento <= reintentos; intento++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      const r = await fetch(API + '?' + qs, { signal: controller.signal });
+      clearTimeout(timeout);
+      const text = await r.text();
+      try { return JSON.parse(text); }
+      catch(e) { throw new Error('Respuesta inválida del servidor'); }
+    } catch(e) {
+      clearTimeout(timeout);
+      if (intento < reintentos) continue; // reintenta
+      if (e.name === 'AbortError') throw new Error('Sin respuesta del servidor. Verificá tu conexión.');
+      throw e;
+    }
+  }
 }
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -1443,7 +1035,7 @@ function cacheInvalidate(key) {
 }
 
 async function init() {
-  showLoading('Conectando...');
+  showLoading('Conectando con Google Sheets...');
   try {
     // Intentar cargar desde cache primero
     let c = cacheGet('manteco_clientes');
@@ -1451,19 +1043,19 @@ async function init() {
 
     if (c && p) {
       // Cache hit — carga instantánea
-      document.getElementById('header-sub').textContent = 'Supabase · ' + c.length + ' clientes · ' + p.length + ' productos (cache)';
+      document.getElementById('header-sub').textContent = 'DB OK · ' + c.length + ' clientes · ' + p.length + ' productos (cache)';
       document.getElementById('db-status-dot').style.background = '#22C55E';
     } else {
       // Cache miss — pedir a Sheets
       const [cFresh, pFresh] = await Promise.all([
-        apiGetClientes(),
-        apiGetProductos()
+        apiFetch({ action: 'getClientes' }),
+        apiFetch({ action: 'getProductos' })
       ]);
       c = Array.isArray(cFresh) ? cFresh : [];
       p = Array.isArray(pFresh) ? pFresh : [];
       cacheSet('manteco_clientes', c);
       cacheSet('manteco_productos', p);
-      document.getElementById('header-sub').textContent = 'Supabase · ' + c.length + ' clientes · ' + p.length + ' productos';
+      document.getElementById('header-sub').textContent = 'DB OK · ' + c.length + ' clientes · ' + p.length + ' productos';
       document.getElementById('db-status-dot').style.background = '#22C55E';
     }
 
@@ -1481,11 +1073,8 @@ async function init() {
     addItem();
     hideLoading();
 
-    // Mostrar pantalla de inicio
-    mostrarInicio();
-
     // Cargar pedidos en background (no bloquea la UI)
-    apiGetPedidos().then(pedidos => {
+    apiFetch({ action: 'getPedidos' }).then(pedidos => {
       todosPedidos = Array.isArray(pedidos) ? pedidos : [];
       actualizarBadges(todosPedidos);
     }).catch(() => {});
@@ -1570,7 +1159,7 @@ async function guardarPedido() {
   try {
     const conEnvio = document.getElementById('check-envio').checked;
     const envio    = conEnvio ? (parseFloat(document.getElementById('envio-monto').value) || 0) : 0;
-    const res = await apiNuevoPedido(cliente, fecha, estado, obs, items, envio);
+    const res = await apiFetch({ action: 'nuevoPedido', cliente, fecha, estado, observaciones: obs, items: JSON.stringify(items), envio });
     if (res.error) throw new Error(res.error);
     ultimoPedido = { id: res.idPedido, cliente, fecha, estado, obs, items, total: res.total, envio };
 
@@ -1687,12 +1276,11 @@ function confirmarGenerarPDF() {
 function generarPDFConOpciones(pedido, conEnvio, costoEnvio, conIva) {
   if (!pedido) return;
 
-  // subtotal = productos solo (total guardado ya incluye envío si lo tiene)
-  const envioGuardado = Number(pedido.envio) || 0;
-  const subtotal      = (Number(pedido.total) || 0) - envioGuardado;
-  const baseConEnvio  = subtotal + (conEnvio ? costoEnvio : 0);
-  const ivaAmt        = conIva ? Math.round(baseConEnvio * 0.21) : 0;
-  const totalFinal    = Math.round(baseConEnvio + ivaAmt);
+  // subtotal = recalculado desde items (no usar pedido.total que puede tener IVA u otros valores)
+  const subtotal     = (pedido.items || []).reduce((s, it) => s + (Number(it.precio) || 0) * (Number(it.cantidad) || 0), 0);
+  const baseConEnvio = subtotal + (conEnvio ? costoEnvio : 0);
+  const ivaAmt       = conIva ? Math.round(baseConEnvio * 0.21) : 0;
+  const totalFinal   = Math.round(baseConEnvio + ivaAmt);
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -1855,8 +1443,8 @@ function generarPDF(pedido) {
   const conEnvio   = document.getElementById('check-envio')  ? document.getElementById('check-envio').checked  : false;
   const costoEnvio = conEnvio ? (parseFloat(document.getElementById('envio-monto').value) || 0) : 0;
 
-  // subtotal = solo productos (sin envío), el envío se muestra aparte
-  const subtotal     = (Number(pedido.total) || 0) - costoEnvio;
+  // subtotal = recalculado desde items (no usar pedido.total)
+  const subtotal     = (pedido.items || []).reduce((s, it) => s + (Number(it.precio) || 0) * (Number(it.cantidad) || 0), 0);
   const baseConEnvio = subtotal + costoEnvio;
   const ivaAmt       = conIva ? Math.round(baseConEnvio * 0.21) : 0;
   const totalFinal   = Math.round(baseConEnvio + ivaAmt);
@@ -2059,150 +1647,7 @@ function generarPDF(pedido) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-function generarPDFProduccion() {
-  const listos = todosPedidos.filter(p => p.estado === 'Listo');
-  if (listos.length === 0) {
-    alert('No hay pedidos en "Listo para entregar".');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210, ML = 16, MR = 16;
-  const TW = W - ML - MR;
-  let y = 0;
-
-  const C_HEADER_BG  = [214, 190, 180];
-  const C_DARK       = [60, 45, 38];
-  const C_MID        = [120, 100, 88];
-  const C_LIGHT      = [200, 182, 172];
-  const C_ROW_ALT    = [250, 246, 243];
-
-  // ── HEADER ────────────────────────────────────────────────
-  doc.setFillColor(...C_HEADER_BG);
-  doc.rect(0, 0, W, 28, 'F');
-  doc.setTextColor(...C_DARK);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('La Chica Manteca', ML, 13);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(...C_MID);
-  doc.text('Planilla de armado — Pedidos listos para entregar', ML, 20);
-  doc.setFontSize(8);
-  doc.text('Emitido: ' + new Date().toLocaleDateString('es-AR') + ' ' + new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'}), W - MR, 20, { align: 'right' });
-
-  y = 38;
-
-  listos.forEach((p, idx) => {
-    // Verificar si hay espacio, sino nueva página
-    const alturaEstimada = 14 + (p.items || []).length * 8 + 6;
-    if (y + alturaEstimada > 270) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // Header del pedido
-    doc.setFillColor(...C_HEADER_BG);
-    doc.rect(ML, y, TW, 10, 'F');
-    doc.setTextColor(...C_DARK);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(p.cliente, ML + 4, y + 7);
-    if (p.fecha) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(...C_MID);
-      doc.text('📅 ' + p.fecha.split('-').reverse().join('/'), W - MR, y + 7, { align: 'right' });
-    }
-    y += 10;
-
-    // Items
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    let rowAlt = false;
-    (p.items || []).forEach(it => {
-      if (rowAlt) {
-        doc.setFillColor(...C_ROW_ALT);
-        doc.rect(ML, y, TW, 8, 'F');
-      }
-      rowAlt = !rowAlt;
-      doc.setTextColor(...C_DARK);
-      doc.text(String(it.nombre), ML + 4, y + 5.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text('× ' + String(it.cantidad), W - MR, y + 5.5, { align: 'right' });
-      doc.setFont('helvetica', 'normal');
-      y += 8;
-    });
-
-    // Observaciones
-    if (p.observaciones) {
-      doc.setTextColor(...C_MID);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Obs: ' + p.observaciones, ML + 4, y + 4);
-      y += 6;
-    }
-
-    // Separador
-    doc.setDrawColor(...C_LIGHT);
-    doc.setLineWidth(0.3);
-    doc.line(ML, y + 2, W - MR, y + 2);
-    y += 8;
-  });
-
-  // Footer
-  doc.setTextColor(...C_LIGHT);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  const pages = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pages; i++) {
-    doc.setPage(i);
-    doc.text('La Chica Manteca · Planilla interna · Pág ' + i + ' de ' + pages, W / 2, 290, { align: 'center' });
-  }
-
-  const nombreArchivo = 'produccion-' + new Date().toLocaleDateString('es-AR').replace(/\//g, '-') + '.pdf';
-  const blob = doc.output('blob');
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = nombreArchivo;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-let vistaKanban = 'tarjetas'; // 'tarjetas' | 'lista'
-
-function toggleVistaKanban() {
-  vistaKanban = vistaKanban === 'tarjetas' ? 'lista' : 'tarjetas';
-  const btn = document.getElementById('btn-vista-toggle');
-  btn.textContent = vistaKanban === 'tarjetas' ? '☰ Lista' : '⊞ Tarjetas';
-  filtrarKanban();
-}
-
-function pedidoListaHTML(p) {
-  const LABELS = { 'Nuevo': 'Nuevo', 'Producción': 'Producción', 'Listo': 'Listo', 'Entregado': 'Entregado' };
-  const idx = ESTADOS.indexOf(p.estado);
-  const prev = idx > 0 ? ESTADOS[idx - 1] : null;
-  const next = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
-  return `
-    <div class="lista-pedido-row">
-      <div style="flex:1;min-width:0">
-        <div class="lista-cliente">${p.cliente}</div>
-        <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}</div>
-      </div>
-      <div class="lista-total">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
-      <div class="lista-acciones">
-        ${prev ? `<button class="lista-btn" onclick="moverPedido('${p.id}','${prev}')" title="${prev}">←</button>` : ''}
-        ${next ? `<button class="lista-btn" onclick="moverPedido('${p.id}','${next}')" title="${next}">→</button>` : ''}
-        <button class="lista-btn" onclick="abrirEditarById('${p.id}')">✏️</button>
-        <button class="lista-btn" onclick="eliminarPedido('${p.id}')">🗑</button>
-      </div>
-    </div>
-  `;
-}
-
-
+// ── KANBAN ────────────────────────────────────────────────────
 const ESTADOS   = ['Nuevo', 'Producción', 'Listo', 'Entregado'];
 const COL_IDS   = { 'Nuevo': 'col-nuevo', 'Producción': 'col-produccion', 'Listo': 'col-listo', 'Entregado': 'col-entregado' };
 const COUNT_IDS = { 'Nuevo': 'count-nuevo', 'Producción': 'count-produccion', 'Listo': 'count-listo', 'Entregado': 'count-entregado' };
@@ -2260,7 +1705,7 @@ function actualizarBadges(pedidos) {
 async function loadKanban() {
   showLoading('Cargando pedidos...');
   try {
-    const pedidos = await apiGetPedidos();
+    const pedidos = await apiFetch({ action: 'getPedidos' });
     if (pedidos.error) throw new Error(pedidos.error);
     todosPedidos = Array.isArray(pedidos) ? pedidos : [];
     document.getElementById('kanban-search').value = '';
@@ -2334,17 +1779,9 @@ function renderKanban(pedidos) {
     const count = document.getElementById(COUNT_IDS[estado]);
     const filtered = pedidos.filter(p => p.estado === estado);
     count.textContent = filtered.length;
-
-    if (filtered.length === 0) {
-      col.innerHTML = '<div class="empty-col">Sin pedidos</div>';
-      return;
-    }
-
-    if (vistaKanban === 'lista') {
-      col.innerHTML = `<div style="background:var(--surface)">${filtered.map(p => pedidoListaHTML(p)).join('')}</div>`;
-    } else {
-      col.innerHTML = filtered.map(p => pedidoCardHTML(p)).join('');
-    }
+    col.innerHTML = filtered.length === 0
+      ? '<div class="empty-col">Sin pedidos</div>'
+      : filtered.map(p => pedidoCardHTML(p)).join('');
   });
 }
 
@@ -2401,7 +1838,7 @@ function toggleItems(id, btn) {
 async function moverPedido(id, nuevoEstado) {
   showLoading('Actualizando estado...');
   try {
-    const res = await apiActualizarEstado(id, nuevoEstado);
+    const res = await apiFetch({ action: 'actualizarEstado', id, estado: nuevoEstado });
     if (res.error) throw new Error(res.error);
     hideLoading();
     await loadKanban();
@@ -2415,7 +1852,7 @@ async function archivarPedido(id) {
   if (!confirm('¿Marcar el pedido ' + id + ' como cobrado? Va a desaparecer del Kanban y se contabiliza en estadísticas.')) return;
   showLoading('Guardando...');
   try {
-    const res = await apiActualizarEstado(id, 'Cobrado');
+    const res = await apiFetch({ action: 'actualizarEstado', id, estado: 'Cobrado' });
     if (res.error) throw new Error(res.error);
     hideLoading();
     await loadKanban();
@@ -2429,7 +1866,7 @@ async function eliminarPedido(id) {
   if (!confirm('¿Eliminar el pedido ' + id + '? Esta acción no se puede deshacer.')) return;
   showLoading('Eliminando pedido...');
   try {
-    const res = await apiEliminarPedido(id);
+    const res = await apiFetch({ action: 'eliminarPedido', id });
     if (res.error) throw new Error(res.error);
     hideLoading();
     await loadKanban();
@@ -2573,7 +2010,15 @@ async function guardarEdicion() {
   showStatus('status-editar', 'Enviando cambios...', 'loading');
 
   try {
-    const res = await apiEditarPedido(pedidoEnEdicion.id, cliente, fecha, estado, obs, items, envio, conIva);
+    const res = await apiFetch({
+      action: 'editarPedido',
+      id: pedidoEnEdicion.id,
+      cliente, fecha, estado,
+      observaciones: obs,
+      items: JSON.stringify(items),
+      envio: envio,
+      iva: conIva ? 1 : 0
+    });
     if (res.error) throw new Error(res.error);
     showStatus('status-editar', '✓ Pedido editado correctamente', 'ok');
     btnGuardar.textContent = '✓ Guardado';
@@ -2618,7 +2063,7 @@ async function guardarPrecio(idx) {
   }
   showLoading('Guardando precio...');
   try {
-    const res = await apiEditarProducto(productos[idx].nombre, nuevoPrecio);
+    const res = await apiFetch({ action: 'editarProducto', nombre: productos[idx].nombre, precio: nuevoPrecio });
     if (res.error) throw new Error(res.error);
     productos[idx].precio = nuevoPrecio;
     showStatus('status-prod-editar', '✓ Precio actualizado', 'ok');
@@ -2632,7 +2077,7 @@ async function eliminarProducto(idx, nombre) {
   if (!confirm('¿Eliminar el producto "' + nombre + '"?')) return;
   showLoading('Eliminando producto...');
   try {
-    const res = await apiEliminarProducto(nombre);
+    const res = await apiFetch({ action: 'eliminarProducto', nombre });
     if (res.error) throw new Error(res.error);
     productos.splice(idx, 1);
     cacheInvalidate('manteco_productos');
@@ -2656,7 +2101,7 @@ async function agregarProducto() {
 
   showLoading('Agregando producto...');
   try {
-    const res = await apiAgregarProducto(nombre, precio);
+    const res = await apiFetch({ action: 'agregarProducto', nombre, precio });
     if (res.error) throw new Error(res.error);
     productos.push({ nombre, precio });
     cacheInvalidate('manteco_productos');
@@ -2756,19 +2201,29 @@ async function confirmarParcial() {
   try {
     // 1. Actualizar pedido original con los items entregados y mover a Entregado
     const totalEntregado = itemsEntregados.reduce((s, i) => s + i.precio * i.cantidad, 0);
-    const resEditar = await apiEditarPedido(
-      pedidoParcial.id, pedidoParcial.cliente, pedidoParcial.fecha, 'Entregado',
-      (pedidoParcial.observaciones || '') + ' [Entrega parcial]',
-      itemsEntregados, pedidoParcial.envio || 0, false
-    );
+    const resEditar = await apiFetch({
+      action: 'editarPedido',
+      id: pedidoParcial.id,
+      cliente: pedidoParcial.cliente,
+      fecha: pedidoParcial.fecha,
+      estado: 'Entregado',
+      observaciones: (pedidoParcial.observaciones || '') + ' [Entrega parcial]',
+      items: JSON.stringify(itemsEntregados),
+      envio: pedidoParcial.envio || 0
+    });
     if (resEditar.error) throw new Error(resEditar.error);
 
     // 2. Crear pedido nuevo con los items pendientes (sin fecha)
-    const resNuevo = await apiNuevoPedido(
-      pedidoParcial.cliente, '', 'Nuevo',
-      'Pendiente de ' + pedidoParcial.id,
-      itemsPendientes, 0
-    );
+    const totalPendiente = itemsPendientes.reduce((s, i) => s + i.precio * i.cantidad, 0);
+    const resNuevo = await apiFetch({
+      action: 'nuevoPedido',
+      cliente: pedidoParcial.cliente,
+      fecha: '',
+      estado: 'Nuevo',
+      observaciones: 'Pendiente de ' + pedidoParcial.id,
+      items: JSON.stringify(itemsPendientes),
+      envio: 0
+    });
     if (resNuevo.error) throw new Error(resNuevo.error);
 
     hideLoading();
@@ -2822,7 +2277,7 @@ async function agregarCliente() {
   }
   showLoading('Agregando cliente...');
   try {
-    const res = await apiAgregarCliente(nombre, whatsapp, direccion);
+    const res = await apiFetch({ action: 'agregarCliente', nombre, whatsapp, direccion });
     if (res.error) throw new Error(res.error);
     clientes.push({ nombre, whatsapp, direccion });
     cacheInvalidate('manteco_clientes');
@@ -2845,7 +2300,7 @@ async function eliminarCliente(idx, nombre) {
   if (!confirm('¿Eliminar el cliente "' + nombre + '"?')) return;
   showLoading('Eliminando cliente...');
   try {
-    const res = await apiEliminarCliente(nombre);
+    const res = await apiFetch({ action: 'eliminarCliente', nombre });
     if (res.error) throw new Error(res.error);
     clientes.splice(idx, 1);
     cacheInvalidate('manteco_clientes');
@@ -2943,9 +2398,9 @@ function renderStatsCliente() {
 async function initStats() {
   showLoading('Cargando estadísticas...');
   try {
-    const res = await apiGetPedidos();
+    // Usar todosPedidos si ya está cargado, sino fetchear
+    const res = todosPedidos.length > 0 ? todosPedidos : await apiFetch({ action: 'getPedidos' });
     statsAllPedidos = Array.isArray(res) ? res : [];
-    todosPedidos = statsAllPedidos;
     // Poblar selector de clientes
     const clientesUnicos = [...new Set(statsAllPedidos.filter(p => ['Cobrado','Entregado','Archivado'].includes(p.estado)).map(p => p.cliente))].sort();
     const sel = document.getElementById('stats-cliente-sel');
@@ -2960,10 +2415,7 @@ async function initStats() {
   } finally {
     hideLoading();
     statsInited = true;
-    // Setear período por defecto y aplicar
-    const btnDefault = document.querySelector('.period-btn');
-    if (btnDefault) setPeriod('7d', btnDefault);
-    aplicarFiltroStats();
+    setPeriod('7d', document.querySelector('.period-btn'));
   }
 }
 
@@ -2976,38 +2428,19 @@ function setPeriod(p, btn) {
     const { desde, hasta } = calcPeriodDates(p);
     statsDesde = desde;
     statsHasta = hasta;
-    // Actualizar los inputs de fecha para mostrar el rango seleccionado
-    document.getElementById('stats-desde').value = desde.toISOString().split('T')[0];
-    document.getElementById('stats-hasta').value = hasta.toISOString().split('T')[0];
     document.getElementById('stats-period-label').textContent = formatFecha(desde) + ' — ' + formatFecha(hasta);
-  }
-}
-
-async function aplicarFiltroStats() {
-  const d = document.getElementById('stats-desde').value;
-  const h = document.getElementById('stats-hasta').value;
-  if (!d || !h) { showStatus('status-nuevo', 'Seleccioná un rango de fechas.', 'err'); return; }
-  statsDesde = new Date(d + 'T00:00:00');
-  statsHasta = new Date(h + 'T23:59:59');
-  document.getElementById('stats-period-label').textContent = formatFecha(statsDesde) + ' — ' + formatFecha(statsHasta);
-
-  // Refetch pedidos frescos desde Supabase
-  showLoading('Cargando estadísticas...');
-  try {
-    const res = await apiGetPedidos();
-    statsAllPedidos = Array.isArray(res) ? res : [];
-    todosPedidos = statsAllPedidos;
     renderStats();
-    renderStatsCliente();
-  } catch(e) {
-    console.error('Error cargando stats:', e);
-  } finally {
-    hideLoading();
   }
 }
 
 function applyCustomRange() {
-  aplicarFiltroStats();
+  const d = document.getElementById('stats-desde').value;
+  const h = document.getElementById('stats-hasta').value;
+  if (!d || !h) return;
+  statsDesde = new Date(d + 'T00:00:00');
+  statsHasta = new Date(h + 'T23:59:59');
+  document.getElementById('stats-period-label').textContent = formatFecha(statsDesde) + ' — ' + formatFecha(statsHasta);
+  renderStats();
 }
 
 function calcPeriodDates(p) {
@@ -3246,6 +2679,40 @@ function renderStats() {
           <div class="ranking-cnt">${d.pedidos} ped.</div>
         </div>`).join('');
 
+  // ── GRÁFICO ESTADOS ──────────────────────────────────────────
+  const estadoMap = {};
+  pedidos.forEach(p => {
+    const e = p.estado || 'Sin estado';
+    estadoMap[e] = (estadoMap[e] || 0) + 1;
+  });
+  const estadoColors = {
+    'Nuevo': '#818CF8', 'Producción': '#FB923C',
+    'Listo': '#4ADE80', 'Entregado': '#94A3B8', 'Archivado': '#CBD5E1', 'Cobrado': '#34D399'
+  };
+  const eLabels = Object.keys(estadoMap);
+  const eValues = Object.values(estadoMap);
+  const eColors = eLabels.map(l => estadoColors[l] || '#C4692A');
+
+  if (chartEstados) chartEstados.destroy();
+  const ctxE = document.getElementById('chart-estados').getContext('2d');
+  chartEstados = new Chart(ctxE, {
+    type: 'doughnut',
+    data: { labels: eLabels, datasets: [{ data: eValues, backgroundColor: eColors, borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      cutout: '60%'
+    }
+  });
+
+  document.getElementById('estados-leyenda').innerHTML = eLabels.map((l, i) => `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:2px;background:${eColors[i]};flex-shrink:0"></div>
+      <span style="flex:1">${l}</span>
+      <strong>${eValues[i]}</strong>
+    </div>`).join('');
+
   // ── GRÁFICO DÍA DE LA SEMANA ─────────────────────────────────
   const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const diasCount = [0,0,0,0,0,0,0];
@@ -3292,1086 +2759,55 @@ function renderStats() {
   });
 }
 
-// ── FACTURACIÓN ───────────────────────────────────────────────
-let pedidosFacturacion = [];
+// ── CONFIG ────────────────────────────────────────────────────
+// PIN ofuscado localmente — no viaja en texto plano
+const PIN_CORRECTO = _p;
 
-function setFactPeriodo(p, btn) {
-  document.querySelectorAll('#page-facturacion .period-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const hoy = new Date();
-  let desde = new Date();
-  desde.setHours(0, 0, 0, 0);
-  if (p === '7d')   desde.setDate(hoy.getDate() - 6);
-  if (p === '30d')  desde.setDate(hoy.getDate() - 29);
-  if (p === 'mes')  desde.setDate(1);
-  if (p === 'todos') desde = new Date('2020-01-01');
-  document.getElementById('fact-desde').value = desde.toISOString().split('T')[0];
-  document.getElementById('fact-hasta').value = hoy.toISOString().split('T')[0];
-  cargarPedidosFacturacion();
-}
+// ── PIN ───────────────────────────────────────────────────────
+let pinActual = '';
 
-async function cargarPedidosFacturacion() {
-  const desde = document.getElementById('fact-desde').value;
-  const hasta  = document.getElementById('fact-hasta').value;
-  const container = document.getElementById('lista-facturacion');
-  container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Cargando...</div>';
-
-  try {
-    // Usar cache o fetchear
-    const pedidos = todosPedidos.length > 0 ? todosPedidos : await apiGetPedidos();
-    if (todosPedidos.length === 0) todosPedidos = pedidos;
-
-    pedidosFacturacion = pedidos.filter(p => {
-      if (!p.fecha) return false;
-      if (desde && p.fecha < desde) return false;
-      if (hasta  && p.fecha > hasta)  return false;
-      return true;
-    }).sort((a, b) => b.fecha.localeCompare(a.fecha));
-
-    const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
-
-    // Resumen
-    const resumen = document.getElementById('fact-resumen');
-    resumen.style.display = 'flex';
-    document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + ' pedidos';
-    document.getElementById('fact-resumen-total').textContent = '$' + Math.round(total).toLocaleString('es-AR');
-
-    if (pedidosFacturacion.length === 0) {
-      container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">No hay pedidos en ese período.</div>';
-      return;
-    }
-
-    container.innerHTML = pedidosFacturacion.map(p => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div style="flex:1">
-            <div style="font-size:16px;font-weight:600">${p.cliente}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'} · ${p.id}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px">${estadoBadge(p.estado)}</div>
-            ${p.observaciones ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:3px">${p.observaciones}</div>` : ''}
-          </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:12px">
-            <div style="font-size:16px;font-weight:700;color:var(--accent)">$${Math.round(p.total).toLocaleString('es-AR')}</div>
-            <button onclick="abrirModalFacturar('${p.id}')" style="margin-top:8px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🧾 Facturar</button>
-          </div>
-        </div>
-        ${p.items && p.items.length > 0 ? `
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          ${p.items.map(it => `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:2px 0"><span>${it.nombre} ×${it.cantidad}</span><span>$${Math.round(it.precio * it.cantidad).toLocaleString('es-AR')}</span></div>`).join('')}
-        </div>` : ''}
-      </div>
-    `).join('');
-
-  } catch(e) {
-    container.innerHTML = `<div style="color:var(--error);font-size:13px;text-align:center;padding:24px">Error: ${e.message}</div>`;
+function pinPress(n) {
+  if (pinActual.length >= 4) return;
+  pinActual += n;
+  actualizarDots();
+  if (pinActual.length === 4) {
+    setTimeout(validarPin, 120);
   }
 }
 
-function estadoBadge(estado) {
-  const colors = {
-    'Nuevo': '#818CF8', 'Producción': '#F59E0B', 'Listo': '#22C55E',
-    'Entregado': '#94A3B8', 'Cobrado': '#34D399', 'Archivado': '#CBD5E1'
-  };
-  const color = colors[estado] || '#C4692A';
-  return `<span style="background:${color}20;color:${color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${estado || 'Sin estado'}</span>`;
+function pinDel() {
+  pinActual = pinActual.slice(0, -1);
+  actualizarDots();
+  document.getElementById('pin-error').textContent = '';
 }
 
-function abrirModalFacturar(id) {
-  const pedido = todosPedidos.find(p => p.id === id) || pedidosFacturacion.find(p => p.id === id);
-  if (!pedido) return;
-
-  const subtotal = Number(pedido.total) || 0;
-  const conIva = false;
-
-  document.getElementById('modal-facturar-body').innerHTML = `
-    <div style="margin-bottom:16px">
-      <div style="font-size:15px;font-weight:600">${pedido.cliente}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">${pedido.fecha ? '📅 ' + pedido.fecha : 'Sin fecha'} · ${pedido.id}</div>
-    </div>
-
-    <label style="margin-top:0">Tipo de factura</label>
-    <select id="fact-tipo">
-      <option value="B">Factura B (Consumidor Final / Monotributista)</option>
-      <option value="A">Factura A (Responsable Inscripto)</option>
-    </select>
-
-    <label>CUIT del cliente (solo Factura A)</label>
-    <input type="text" id="fact-cuit" placeholder="Ej: 20-12345678-9" />
-
-    <label>Condición IVA del cliente</label>
-    <select id="fact-condicion-iva">
-      <option value="CF">Consumidor Final</option>
-      <option value="RI">Responsable Inscripto</option>
-      <option value="MONO">Monotributista</option>
-      <option value="EX">Exento</option>
-    </select>
-
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 0;margin-top:8px;border-top:1px solid var(--border)">
-      <input type="checkbox" id="fact-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="recalcFactTotal(${subtotal})" />
-      <label for="fact-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Incluir IVA (21%)</label>
-    </div>
-
-    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px">
-        <span>Subtotal</span><span>$${Math.round(subtotal).toLocaleString('es-AR')}</span>
-      </div>
-      <div id="fact-iva-row" style="display:none;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px">
-        <span>IVA 21%</span><span id="fact-iva-monto">$0</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
-        <span>Total a facturar</span><span style="color:var(--accent)" id="fact-total-display">$${Math.round(subtotal).toLocaleString('es-AR')}</span>
-      </div>
-    </div>
-
-    <button class="btn-primary" onclick="confirmarFacturacion('${id}', ${subtotal})">🧾 Confirmar y facturar</button>
-    <div class="status" id="status-facturar"></div>
-  `;
-
-  document.getElementById('modal-facturar').classList.add('open');
-}
-
-function recalcFactTotal(subtotal) {
-  const conIva = document.getElementById('fact-check-iva').checked;
-  const iva = conIva ? Math.round(subtotal * 0.21) : 0;
-  const total = subtotal + iva;
-  document.getElementById('fact-iva-row').style.display = conIva ? 'flex' : 'none';
-  document.getElementById('fact-iva-monto').textContent = '$' + iva.toLocaleString('es-AR');
-  document.getElementById('fact-total-display').textContent = '$' + Math.round(total).toLocaleString('es-AR');
-}
-
-function cerrarModalFacturar() {
-  document.getElementById('modal-facturar').classList.remove('open');
-}
-
-async function confirmarFacturacion(id, subtotal) {
-  const tipo = document.getElementById('fact-tipo').value;
-  const cuitCliente = document.getElementById('fact-cuit').value.trim();
-  const condicion = document.getElementById('fact-condicion-iva').value;
-  const conIva = document.getElementById('fact-check-iva').checked;
-  const puntoVenta = 1; // TODO: hacer configurable
-
-  if (tipo === 'A' && !cuitCliente) {
-    showStatus('status-facturar', 'Ingresá el CUIT del cliente para Factura A.', 'err');
-    return;
-  }
-
-  const btn = document.querySelector('#modal-facturar .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Facturando...'; }
-  showStatus('status-facturar', 'Conectando con ARCA...', 'loading');
-
-  try {
-    const session = await supabaseAuth.auth.getSession();
-    const userEmail = session?.data?.session?.user?.email || '';
-
-    const res = await fetch('/api/facturar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo,
-        cuitCliente,
-        condicionIva: condicion,
-        impTotal: subtotal,
-        conIva,
-        puntoVenta,
-        pedidoId: id,
-        userEmail
-      })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || data.error) throw new Error(data.error || 'Error al facturar');
-
-    showStatus('status-facturar',
-      `✓ Factura ${data.tipo} N° ${data.nroComprobante} emitida. CAE: ${data.CAE} · Vto: ${data.CAEFchVto}`,
-      'ok'
-    );
-    if (btn) btn.textContent = '✓ Facturado';
-
-  } catch(e) {
-    showStatus('status-facturar', 'Error: ' + e.message, 'err');
-    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar y facturar'; }
+function actualizarDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    dot.classList.toggle('filled', i < pinActual.length);
+    dot.classList.remove('error');
   }
 }
 
-
-async function loginConGoogle() {
-  const btn = document.getElementById('btn-google-login');
-  btn.disabled = true;
-  btn.style.opacity = '0.6';
-  document.getElementById('login-error').textContent = '';
-  try {
-    const { data, error } = await supabaseAuth.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.href }
-    });
-    if (error) throw error;
-  } catch(e) {
-    document.getElementById('login-error').textContent = 'Error: ' + e.message;
-    btn.disabled = false;
-    btn.style.opacity = '';
-  }
-}
-
-const EMAILS_PERMITIDOS = ['juliandilullo@gmail.com', 'sof.cosen@gmail.com'];
-
-async function checkAuth() {
-  const { data: { session } } = await supabaseAuth.auth.getSession();
-  if (session) {
-    const email = session.user.email;
-    if (!EMAILS_PERMITIDOS.includes(email)) {
-      await supabaseAuth.auth.signOut();
-      document.getElementById('pin-overlay').innerHTML = `
-        <div class="pin-logo">🔒</div>
-        <div class="pin-title">Acceso denegado</div>
-        <div class="pin-sub" style="color:var(--error);margin-top:8px">${email} no tiene permiso.</div>
-        <button onclick="loginConGoogle()" style="margin-top:24px;padding:12px 24px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Intentar con otra cuenta</button>
-      `;
-      return;
-    }
-    const nombre = session.user.user_metadata?.name?.split(' ')[0] || '';
-    document.getElementById('pin-overlay').innerHTML = `
-      <div class="pin-logo">🥐</div>
-      <div class="pin-title">¡Bienvenido${nombre ? ', ' + nombre : ''}!</div>
-      <div class="pin-sub">Sistema Manteco</div>
-    `;
-    setTimeout(() => {
-      document.getElementById('pin-overlay').classList.add('hidden');
-      init();
-    }, 1200);
+function validarPin() {
+  if (pinActual === PIN_CORRECTO) {
+    document.getElementById('pin-overlay').classList.add('hidden');
+    init();
   } else {
-    document.getElementById('pin-overlay').style.display = 'flex';
-  }
-}
-
-
-// ── API COSTEO ────────────────────────────────────────────────
-async function apiGetIngredientes() { return await supa.get('ingredientes', 'order=nombre'); }
-async function apiGetRecetas() {
-  const [recetas, items] = await Promise.all([supa.get('recetas','order=nombre'), supa.get('receta_items','order=receta_id')]);
-  const map = {};
-  items.forEach(it => { if (!map[it.receta_id]) map[it.receta_id] = []; map[it.receta_id].push({ nombre: it.nombre, gramos: Number(it.gramos) }); });
-  return recetas.map(r => ({ ...r, rendimiento: Number(r.rendimiento), ingredientes: map[r.id] || [] }));
-}
-async function apiAgregarIngrediente(nombre, precio, unidad) { await supa.post('ingredientes', { nombre, precio, unidad }); return { ok: true }; }
-async function apiEditarIngrediente(nombre, precio) { await supa.patch('ingredientes', `nombre=eq.${encodeURIComponent(nombre)}`, { precio }); return { ok: true }; }
-async function apiEliminarIngrediente(nombre) { await supa.delete('ingredientes', `nombre=eq.${encodeURIComponent(nombre)}`); return { ok: true }; }
-async function apiNuevaReceta(nombre, producto, rendimiento, ingredientes) {
-  const id = 'R' + Date.now();
-  await supa.post('recetas', { id, nombre, producto, rendimiento });
-  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos })));
-  return { ok: true, id };
-}
-async function apiEditarReceta(id, nombre, producto, rendimiento, ingredientes) {
-  await supa.patch('recetas', `id=eq.${id}`, { nombre, producto, rendimiento });
-  await supa.delete('receta_items', `receta_id=eq.${id}`);
-  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos })));
-  return { ok: true };
-}
-async function apiEliminarReceta(id) { await supa.delete('receta_items', `receta_id=eq.${id}`); await supa.delete('recetas', `id=eq.${id}`); return { ok: true }; }
-async function apiGetCostosFijos() {
-  const rows = await supa.get('costos_fijos', '');
-  const data = {};
-  rows.forEach(r => { data[r.concepto] = Number(r.monto) || 0; });
-  return { sueldos: data.sueldos || 0, alquiler: data.alquiler || 0, servicios: data.servicios || 0 };
-}
-async function apiGuardarCostosFijos(sueldos, alquiler, servicios) {
-  await Promise.all([
-    supa.patch('costos_fijos', 'concepto=eq.sueldos', { monto: sueldos }),
-    supa.patch('costos_fijos', 'concepto=eq.alquiler', { monto: alquiler }),
-    supa.patch('costos_fijos', 'concepto=eq.servicios', { monto: servicios })
-  ]);
-  return { ok: true };
-}
-
-function showCosteoTab(tab) {
-  ['ingredientes','recetas','costos','ganancias'].forEach(t => {
-    document.getElementById('ctab-page-' + t).style.display = t === tab ? 'block' : 'none';
-    document.getElementById('ctab-' + t).classList.toggle('active', t === tab);
-  });
-  if (tab === 'ganancias') {
-    if (!document.getElementById('gan-fecha-desde').value) setGanPeriodMes(document.querySelector('#ctab-ganancias ~ * .period-btn'));
-    loadGanancias();
-  }
-  if (tab === 'costos') loadCostos();
-}
-let ingredientesCache = [];
-let recetasCache = [];
-let productosCache = []; // precios de venta del sistema de pedidos
-let recetaEditandoId = null;
-
-// ══════════════════════════════════════════════════════════════
-// PIN
-// ══════════════════════════════════════════════════════════════
-let pinStr = '';
-let pinCorrecto = '';
-
-async function initConfig() {
-  // Supabase — no necesita config externa
-  PIN_OK = false;
-}
-
-// ══════════════════════════════════════════════════════════════
-// API SUPABASE
-// ══════════════════════════════════════════════════════════════
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ══════════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════════
-async function initCosteo() {
-  showLoading('Conectando...');
-  try {
-    const [ings, recs, prods, cf] = await Promise.all([
-      apiGetIngredientes(),
-      apiGetRecetas(),
-      apiGetProductos(),
-      apiGetCostosFijos()
-    ]);
-    ingredientesCache = Array.isArray(ings) ? ings : [];
-    recetasCache = Array.isArray(recs) ? recs : [];
-    productosCache = Array.isArray(prods) ? prods : [];
-    costosFijosCache = cf || { sueldos: 0, alquiler: 0, servicios: 0 };
-    if (cf) {
-      document.getElementById('cf-sueldos').value   = cf.sueldos   || '';
-      document.getElementById('cf-alquiler').value  = cf.alquiler  || '';
-      document.getElementById('cf-servicios').value = cf.servicios || '';
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('pd' + i).classList.add('error');
+      document.getElementById('pd' + i).classList.remove('filled');
     }
-    renderIngredientes();
-    renderRecetas();
-    calcularUnidadesMes();
-    // header updated by Manteco
-  } catch(e) {
-    document.getElementById('header-sub').textContent = 'Error de conexión';
-  }
-  hideLoading();
-}
-
-
-
-// ══════════════════════════════════════════════════════════════
-// INGREDIENTES
-// ══════════════════════════════════════════════════════════════
-function renderIngredientes() {
-  const el = document.getElementById('lista-ingredientes');
-  const cnt = document.getElementById('ing-count');
-  cnt.textContent = ingredientesCache.length + ' ingredientes';
-
-  if (!ingredientesCache.length) {
-    el.innerHTML = '<div class="empty-msg">Todavía no cargaste ingredientes.</div>';
-    return;
-  }
-
-  el.innerHTML = ingredientesCache.map((ing, idx) => `
-    <div class="ingrediente-row">
-      <div>
-        <div class="ing-nombre">${ing.nombre}</div>
-        <div class="ing-unit">por ${ing.unidad}</div>
-      </div>
-      <div class="ing-precio-wrap">
-        <span style="font-size:13px;color:var(--muted)">$</span>
-        <input class="ing-precio-input" type="number" value="${ing.precio}" min="0" step="any"
-          onchange="actualizarPrecioIng(${idx}, this.value)" />
-      </div>
-      <button class="btn-remove" onclick="eliminarIngrediente(${idx})" title="Eliminar">🗑</button>
-    </div>
-  `).join('');
-}
-
-async function guardarIngrediente() {
-  const nombre = document.getElementById('nuevo-ing-nombre').value.trim();
-  const precio = parseFloat(document.getElementById('nuevo-ing-precio').value);
-  const unidad = document.getElementById('nuevo-ing-unidad').value;
-  if (!nombre) return showStatus('status-ingrediente', 'Ingresá un nombre', 'err');
-  if (isNaN(precio) || precio <= 0) return showStatus('status-ingrediente', 'Ingresá un precio válido', 'err');
-
-  const btn = document.getElementById('btn-nuevo-ingrediente');
-  btn.disabled = true; btn.textContent = 'Guardando...';
-
-  try {
-    const r = await apiAgregarIngrediente(nombre, precio, unidad);
-    if (r.ok) {
-      ingredientesCache.push({ nombre, precio, unidad });
-      document.getElementById('nuevo-ing-nombre').value = '';
-      document.getElementById('nuevo-ing-precio').value = '';
-      document.getElementById('nuevo-ing-unidad').value = 'kg';
-      renderIngredientes();
-      updateHeaderSub();
-      showStatus('status-ingrediente', '✓ Ingrediente guardado', 'ok');
-    } else {
-      showStatus('status-ingrediente', r.error || 'Error al guardar', 'err');
-    }
-  } catch(e) {
-    showStatus('status-ingrediente', 'Error de conexión', 'err');
-  }
-  btn.disabled = false; btn.textContent = 'Agregar ingrediente';
-}
-
-async function actualizarPrecioIng(idx, valor) {
-  const ing = ingredientesCache[idx];
-  const precio = parseFloat(valor);
-  if (isNaN(precio) || precio < 0) return;
-  try {
-    await apiEditarIngrediente(ing.nombre, precio);
-    ingredientesCache[idx].precio = precio;
-    renderCostos(); // actualizar costos en tiempo real
-  } catch(e) { /* silencioso */ }
-}
-
-async function eliminarIngrediente(idx) {
-  const ing = ingredientesCache[idx];
-  if (!confirm(`¿Eliminar "${ing.nombre}"?`)) return;
-  try {
-    showLoading('Eliminando...');
-    await apiEliminarIngrediente(ing.nombre);
-    ingredientesCache.splice(idx, 1);
-    renderIngredientes();
-    renderCostos();
-    updateHeaderSub();
-  } catch(e) { alert('Error al eliminar'); }
-  hideLoading();
-}
-
-// ══════════════════════════════════════════════════════════════
-// RECETAS — MODAL
-// ══════════════════════════════════════════════════════════════
-function abrirNuevaReceta() {
-  recetaEditandoId = null;
-  document.getElementById('modal-receta-titulo').textContent = 'Nueva receta';
-  document.getElementById('receta-nombre').value = '';
-  document.getElementById('receta-nombre').value = '';
-  document.getElementById('receta-rendimiento').value = '';
-  document.getElementById('receta-ing-container').innerHTML = '';
-  document.getElementById('btn-guardar-receta').textContent = 'Guardar receta';
-  document.getElementById('btn-guardar-receta').disabled = false;
-  // hideStatus('status-receta');
-
-  // Poblar select de productos
-  const sel = document.getElementById('receta-producto-sel');
-  sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    productosCache.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
-
-  addRecetaIng(); // al menos 1
-  updatePreviewCosto();
-  document.getElementById('modal-receta').classList.add('open');
-}
-
-function abrirEditarReceta(id) {
-  const receta = recetasCache.find(r => r.id === id);
-  if (!receta) return;
-  recetaEditandoId = id;
-
-  document.getElementById('modal-receta-titulo').textContent = 'Editar receta';
-  document.getElementById('receta-nombre').value = id;
-  document.getElementById('receta-nombre').value = receta.nombre;
-  document.getElementById('receta-rendimiento').value = receta.rendimiento;
-  document.getElementById('btn-guardar-receta').textContent = 'Guardar cambios';
-  document.getElementById('btn-guardar-receta').disabled = false;
-  // hideStatus('status-receta');
-
-  const sel = document.getElementById('receta-producto-sel');
-  sel.innerHTML = '<option value="">— seleccionar —</option>' +
-    productosCache.map(p => `<option value="${p.nombre}"${p.nombre === receta.producto ? ' selected' : ''}>${p.nombre}</option>`).join('');
-
-  document.getElementById('receta-ing-container').innerHTML = '';
-  receta.ingredientes.forEach(ing => addRecetaIng(ing.nombre, ing.gramos));
-  if (!receta.ingredientes.length) addRecetaIng();
-
-  updatePreviewCosto();
-  document.getElementById('modal-receta').classList.add('open');
-}
-
-function cerrarModalReceta() {
-  document.getElementById('modal-receta').classList.remove('open');
-}
-
-function addRecetaIng(nombre = '', gramos = '') {
-  const container = document.getElementById('receta-ing-container');
-  const div = document.createElement('div');
-  div.className = 'receta-ing-row';
-
-  const opts = ingredientesCache.map(ing =>
-    `<option value="${ing.nombre}"${ing.nombre === nombre ? ' selected' : ''}>${ing.nombre} (${ing.unidad})</option>`
-  ).join('');
-
-  div.innerHTML = `
-    <select onchange="updatePlaceholder(this);updatePreviewCosto()">
-      <option value="">— ingrediente —</option>
-      ${opts}
-    </select>
-    <input type="number" placeholder="cant." min="0" step="any" value="${gramos}" oninput="updatePreviewCosto()" />
-    <button class="btn-remove" onclick="this.closest('.receta-ing-row').remove();updatePreviewCosto()">✕</button>
-  `;
-  // Actualizar placeholder si ya hay valor seleccionado
-  const sel = div.querySelector('select');
-  const inp = div.querySelector('input');
-  if (nombre) updatePlaceholderEl(sel, inp);
-  container.appendChild(div);
-}
-
-function getRecetaIngRows() {
-  return Array.from(document.querySelectorAll('#receta-ing-container .receta-ing-row')).map(row => ({
-    nombre: row.querySelector('select').value,
-    gramos: parseFloat(row.querySelector('input').value) || 0
-  })).filter(r => r.nombre && r.gramos > 0);
-}
-
-function updatePreviewCosto() {
-  const ings = getRecetaIngRows();
-  const rendimiento = parseInt(document.getElementById('receta-rendimiento').value) || 0;
-
-  const costoMasa = ings.reduce((sum, ing) => {
-    const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-    if (!ingData) return sum;
-    return sum + getCostoIngrediente(ingData, ing.gramos);
-  }, 0);
-
-  document.getElementById('preview-costo-masa').textContent = '$' + Math.round(costoMasa).toLocaleString('es-AR');
-  document.getElementById('preview-costo-unit').textContent = rendimiento > 0
-    ? '$' + (costoMasa / rendimiento).toFixed(1)
-    : '$—';
-}
-
-function updatePlaceholder(select) {
-  const inp = select.closest('.receta-ing-row').querySelector('input');
-  updatePlaceholderEl(select, inp);
-}
-
-function updatePlaceholderEl(select, inp) {
-  const nombre = select.value;
-  const ing = ingredientesCache.find(i => i.nombre === nombre);
-  if (!ing) { inp.placeholder = 'cant.'; return; }
-  switch(ing.unidad) {
-    case 'kg':     inp.placeholder = 'gramos'; break;
-    case 'lt':     inp.placeholder = 'ml'; break;
-    case 'unidad': inp.placeholder = 'unidades'; break;
-    case 'docena': inp.placeholder = 'unidades'; break;
-    default:       inp.placeholder = 'cant.';
+    document.getElementById('pin-error').textContent = 'PIN incorrecto. Intentá de nuevo.';
+    setTimeout(() => {
+      pinActual = '';
+      actualizarDots();
+      document.getElementById('pin-error').textContent = '';
+    }, 800);
   }
 }
 
-// Calcula el costo de un ingrediente dado su cantidad ingresada
-// Para kg/lt: cantidad = gramos/ml
-// Para unidad: cantidad = unidades
-// Para docena: cantidad = unidades (el sistema convierte a docenas)
-function getCostoIngrediente(ing, cantidad) {
-  // kg/lt: cantidad en gramos o ml
-  // unidad/docena: cantidad en unidades
-  switch(ing.unidad) {
-    case 'kg':     return (ing.precio / 1000) * cantidad;
-    case 'lt':     return (ing.precio / 1000) * cantidad;
-    case 'unidad': return ing.precio * cantidad;
-    case 'docena': return (ing.precio / 12) * cantidad;
-    default:       return (ing.precio / 1000) * cantidad;
-  }
-}
-
-function getCostoPorGramo(ing) { return ing.precio / 1000; }
-
-async function guardarReceta() {
-  const nombre = document.getElementById('receta-nombre').value.trim();
-  const producto = document.getElementById('receta-producto-sel').value;
-  const rendimiento = parseInt(document.getElementById('receta-rendimiento').value);
-  const ingredientes = getRecetaIngRows();
-
-  if (!nombre) return showStatus('status-receta', 'Ingresá un nombre para la receta', 'err');
-  if (!rendimiento || rendimiento < 1) return showStatus('status-receta', 'Ingresá el rendimiento (cuántas unidades salen)', 'err');
-  if (!ingredientes.length) return showStatus('status-receta', 'Agregá al menos un ingrediente', 'err');
-
-  const btn = document.getElementById('btn-guardar-receta');
-  btn.disabled = true; btn.textContent = 'Guardando...';
-
-  try {
-    let r;
-    if (recetaEditandoId) {
-      r = await apiEditarReceta(recetaEditandoId, nombre, producto || '', rendimiento, ingredientes);
-    } else {
-      r = await apiNuevaReceta(nombre, producto || '', rendimiento, ingredientes);
-    }
-    if (r.ok) {
-      // Recargar recetas
-      const recs = await apiGetRecetas();
-      recetasCache = Array.isArray(recs) ? recs : [];
-      renderRecetas();
-      renderCostos();
-      updateHeaderSub();
-      cerrarModalReceta();
-    } else {
-      showStatus('status-receta', r.error || 'Error al guardar', 'err');
-      btn.disabled = false; btn.textContent = recetaEditandoId ? 'Guardar cambios' : 'Guardar receta';
-    }
-  } catch(e) {
-    showStatus('status-receta', 'Error de conexión', 'err');
-    btn.disabled = false; btn.textContent = recetaEditandoId ? 'Guardar cambios' : 'Guardar receta';
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// RECETAS — RENDER
-// ══════════════════════════════════════════════════════════════
-function renderRecetas() {
-  const el = document.getElementById('lista-recetas');
-  if (!recetasCache.length) {
-    el.innerHTML = '<div class="empty-msg">Todavía no cargaste recetas.<br><br>Primero agregá ingredientes, después creá tus recetas.</div>';
-    return;
-  }
-
-  el.innerHTML = recetasCache.map(rec => {
-    const costo = calcularCostoReceta(rec);
-    return `
-    <div class="receta-item">
-      <div class="receta-header" onclick="toggleReceta('${rec.id}')">
-        <div>
-          <h3>${rec.nombre}${rec.producto ? ` <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">· ${rec.producto}</span>` : ''}</h3>
-          <div class="receta-meta">${rec.ingredientes.length} ingredientes · rinde ${rec.rendimiento} unidades</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:10px">
-          <div style="font-size:15px;font-weight:700;color:var(--accent)">$${costo > 0 ? (costo/rec.rendimiento).toFixed(1) : '—'}</div>
-          <div style="font-size:11px;color:var(--muted)">por unidad</div>
-        </div>
-      </div>
-      <div class="receta-body" id="body-${rec.id}">
-        ${rec.ingredientes.map(ing => {
-          const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-          const costoIng = ingData ? getCostoIngrediente(ingData, ing.gramos) : 0;
-          const unidadLabel = !ingData ? 'g' :
-            (ingData.unidad === 'kg' || ingData.unidad === 'lt') ? (ingData.unidad === 'lt' ? 'ml' : 'g') : 'u.';
-          return `<div class="receta-ing-detail">
-            <span>${ing.nombre} — ${ing.gramos}${unidadLabel}</span>
-            <span>$${Math.round(costoIng).toLocaleString('es-AR')}</span>
-          </div>`;
-        }).join('')}
-        <div class="receta-ing-detail" style="font-weight:600;border-top:1px solid var(--border);padding-top:6px;margin-top:4px">
-          <span>Costo total de la masa</span>
-          <span>$${Math.round(costo).toLocaleString('es-AR')}</span>
-        </div>
-        <div class="receta-ing-detail" style="color:var(--accent);font-weight:600">
-          <span>Costo por unidad</span>
-          <span>$${costo > 0 ? (costo/rec.rendimiento).toFixed(2) : '—'}</span>
-        </div>
-        <div class="receta-actions">
-          <button class="btn-sm" onclick="abrirEditarReceta('${rec.id}')">✏️ Editar</button>
-          <button class="btn-ghost" onclick="pedirEliminarReceta('${rec.id}')">🗑 Eliminar</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleReceta(id) {
-  const body = document.getElementById('body-' + id);
-  if (body) body.classList.toggle('open');
-}
-
-// ══════════════════════════════════════════════════════════════
-// COSTOS — RENDER
-// ══════════════════════════════════════════════════════════════
-function renderCostos() {
-  const el = document.getElementById('lista-costos');
-  const recetasConProducto = recetasCache.filter(r => r.producto);
-
-  if (!recetasConProducto.length) {
-    el.innerHTML = '<div class="empty-msg">Asociá tus recetas a productos para ver el análisis de costos y márgenes.</div>';
-    return;
-  }
-
-  const cfPorUnidad = getCostoFijoPorUnidad();
-
-  el.innerHTML = recetasConProducto.map(rec => {
-    const costoMasa = calcularCostoReceta(rec);
-    const costoRecetaUnit = costoMasa / rec.rendimiento;
-    const costoUnit = costoRecetaUnit + cfPorUnidad;
-    const prodData = productosCache.find(p => p.nombre === rec.producto);
-    const precioVenta = prodData ? prodData.precio : 0;
-    const ganancia = precioVenta - costoUnit;
-    const margen = precioVenta > 0 ? (ganancia / precioVenta * 100) : 0;
-
-    let margenClass = 'rojo';
-    let margenLabel = '⚠️ Bajo';
-    if (margen >= 60) { margenClass = 'verde'; margenLabel = '✓ Bueno'; }
-    else if (margen >= 40) { margenClass = 'amarillo'; margenLabel = '~ Regular'; }
-
-    const costoStr = costoUnit > 0 ? '$' + costoUnit.toFixed(2) : '—';
-    const ventaStr = precioVenta > 0 ? '$' + precioVenta.toLocaleString('es-AR') : 'Sin precio';
-    const gananciaStr = precioVenta > 0 && costoUnit > 0 ? '$' + ganancia.toFixed(2) : '—';
-    const margenStr = precioVenta > 0 && costoUnit > 0 ? margen.toFixed(0) + '%' : '—';
-
-    return `
-    <div class="costo-row" style="border-left: 4px solid ${margenClass === 'margen-ok' ? '#22C55E' : margenClass === 'margen-warn' ? '#F59E0B' : '#EF4444'}">
-      <div class="costo-top">
-        <div>
-          <div class="costo-nombre">${rec.producto}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${rec.nombre} · rinde ${rec.rendimiento} u.</div>
-        </div>
-        ${precioVenta > 0 && costoUnit > 0 ? `<span class="${margenClass}" style="font-size:13px;padding:4px 10px">${margenLabel} ${margenStr}</span>` : ''}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Costo/u.</div>
-          <div style="font-size:16px;font-weight:700;color:var(--error)">${costoStr}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Precio venta</div>
-          <div style="font-size:16px;font-weight:700">${ventaStr}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Ganancia/u.</div>
-          <div style="font-size:16px;font-weight:700;color:var(--success)">${gananciaStr}</div>
-        </div>
-      </div>
-      ${cfPorUnidad > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">Receta: <strong>$${costoRecetaUnit.toFixed(0)}</strong> + Fijos: <strong>$${cfPorUnidad.toFixed(0)}</strong> = Costo total: <strong>$${costoUnit.toFixed(0)}</strong></div>` : ''}
-      ${precioVenta > 0 && costoUnit > 0 ? `
-      <div style="font-size:12px;color:var(--muted)">
-        Punto de equilibrio: <strong>${Math.ceil(costoMasa / precioVenta)} unidades</strong>
-      </div>` : '<div style="font-size:12px;color:var(--muted)">Sin precio de venta cargado</div>'}
-    </div>`;
-  }).join('');
-}
-
-function calcularCostoReceta(rec) {
-  return (rec.ingredientes || []).reduce((sum, ing) => {
-    const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-    if (!ingData) return sum;
-    return sum + getCostoIngrediente(ingData, ing.gramos);
-  }, 0);
-}
-
-// ══════════════════════════════════════════════════════════════
-// ELIMINAR RECETA
-// ══════════════════════════════════════════════════════════════
-let recetaAEliminarId = null;
-
-function pedirEliminarReceta(id) {
-  recetaAEliminarId = id;
-  document.getElementById('modal-confirmar-eliminar').classList.add('open');
-}
-function cerrarConfirmarEliminar() {
-  recetaAEliminarId = null;
-  document.getElementById('modal-confirmar-eliminar').classList.remove('open');
-}
-async function confirmarEliminarReceta() {
-  if (!recetaAEliminarId) return;
-  const btn = document.getElementById('btn-confirmar-eliminar-receta');
-  btn.disabled = true; btn.textContent = 'Eliminando...';
-  try {
-    const r = await apiEliminarReceta(recetaAEliminarId);
-    if (r.ok) {
-      recetasCache = recetasCache.filter(r => r.id !== recetaAEliminarId);
-      renderRecetas();
-      renderCostos();
-      updateHeaderSub();
-      cerrarConfirmarEliminar();
-    }
-  } catch(e) { alert('Error al eliminar'); }
-  btn.disabled = false; btn.textContent = 'Sí, eliminar';
-}
-
-async function loadCostos() {
-  showLoading('Actualizando...');
-  try {
-    const [recs, prods] = await Promise.all([
-      apiGetRecetas(),
-      apiGetProductos()
-    ]);
-    recetasCache = Array.isArray(recs) ? recs : [];
-    productosCache = Array.isArray(prods) ? prods : [];
-    renderRecetas();
-    renderCostos();
-  } catch(e) { /* silencioso */ }
-  hideLoading();
-}
-
-// ══════════════════════════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════════════════════════
-function hideStatus(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.className = 'status';
-  el.textContent = '';
-}
-function updateHeaderSub() {
-  document.getElementById('header-sub').textContent =
-    `${ingredientesCache.length} ingredientes · ${recetasCache.length} recetas`;
-}
-
-// ══════════════════════════════════════════════════════════════
-// COSTOS FIJOS
-// ══════════════════════════════════════════════════════════════
-let costosFijosCache = { sueldos: 0, alquiler: 0, servicios: 0 };
-let unidadesMesCache = 0;
-
-async function loadCostosFijos() {
-  try {
-    const r = await apiGetCostosFijos();
-    costosFijosCache = r;
-    document.getElementById('cf-sueldos').value   = r.sueldos   || '';
-    document.getElementById('cf-alquiler').value  = r.alquiler  || '';
-    document.getElementById('cf-servicios').value = r.servicios || '';
-    actualizarCostoFijoPreview();
-  } catch(e) {}
-}
-
-function getTotalCostosFijos() {
-  return (parseFloat(document.getElementById('cf-sueldos').value)   || 0) +
-         (parseFloat(document.getElementById('cf-alquiler').value)  || 0) +
-         (parseFloat(document.getElementById('cf-servicios').value) || 0);
-}
-
-function getCostoFijoPorUnidad() {
-  if (!unidadesMesCache) return 0;
-  return getTotalCostosFijos() / unidadesMesCache;
-}
-
-function actualizarCostoFijoPreview() {
-  const cfPorUnidad = getCostoFijoPorUnidad();
-  document.getElementById('cf-por-unidad').textContent =
-    unidadesMesCache > 0
-      ? '$' + cfPorUnidad.toFixed(2) + ' (' + unidadesMesCache + ' u. este mes)'
-      : 'Cargando unidades...';
-  renderCostos();
-}
-
-async function guardarCostosFijos() {
-  const btn = document.getElementById('btn-guardar-cf');
-  btn.disabled = true; btn.textContent = 'Guardando...';
-  try {
-    const r = await apiGuardarCostosFijos(
-      document.getElementById('cf-sueldos').value   || 0,
-      document.getElementById('cf-alquiler').value  || 0,
-      document.getElementById('cf-servicios').value || 0
-    );
-    if (r.ok) {
-      showStatus('status-cf', '✓ Costos fijos guardados', 'ok');
-      actualizarCostoFijoPreview();
-    } else {
-      showStatus('status-cf', r.error || 'Error al guardar', 'err');
-    }
-  } catch(e) {
-    showStatus('status-cf', 'Error de conexión', 'err');
-  }
-  btn.disabled = false; btn.textContent = 'Guardar costos fijos';
-}
-
-async function calcularUnidadesMes() {
-  // Suma todas las unidades en pedidos Cobrado del mes actual
-  if (!pedidosCache.length) {
-    try {
-      const [pedidos, items] = await Promise.all([
-        supa.get('pedidos', 'order=id'),
-        supa.get('items_pedido', 'order=pedido_id')
-      ]);
-      const imap = {};
-      items.forEach(it => { if (!imap[it.pedido_id]) imap[it.pedido_id] = []; imap[it.pedido_id].push({ nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio) }); });
-      const p = pedidos.map(p => ({ ...p, items: imap[p.id] || [] }));
-      pedidosCache = Array.isArray(p) ? p : [];
-    } catch(e) { return; }
-  }
-  const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const finMes    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-  finMes.setHours(23,59,59);
-
-  let total = 0;
-  pedidosCache.forEach(p => {
-    if (p.estado !== 'Cobrado') return;
-    if (!p.fecha) return;
-    const fecha = new Date(p.fecha);
-    if (fecha < inicioMes || fecha > finMes) return;
-    (p.items || []).forEach(item => { total += item.cantidad; });
-  });
-  unidadesMesCache = total;
-  actualizarCostoFijoPreview();
-}
-
-// ══════════════════════════════════════════════════════════════
-// GANANCIAS
-// ══════════════════════════════════════════════════════════════
-let pedidosCache = [];
-let ganPeriodoActivo = null;
-
-async function loadGanancias() {
-  if (!pedidosCache.length) {
-    try {
-      const [pedidos, items] = await Promise.all([
-        supa.get('pedidos', 'order=id'),
-        supa.get('items_pedido', 'order=pedido_id')
-      ]);
-      const imap = {};
-      items.forEach(it => { if (!imap[it.pedido_id]) imap[it.pedido_id] = []; imap[it.pedido_id].push({ nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio) }); });
-      const p = pedidos.map(p => ({ ...p, items: imap[p.id] || [] }));
-      pedidosCache = Array.isArray(p) ? p : [];
-    } catch(e) { return; }
-  }
-  renderGanancias();
-}
-
-function setGanPeriodo(dias) {
-  ganPeriodoActivo = dias + 'd';
-  const hasta = new Date();
-  const desde = new Date();
-  desde.setDate(desde.getDate() - dias);
-  document.getElementById('gan-fecha-desde').value = desde.toISOString().split('T')[0];
-  document.getElementById('gan-fecha-hasta').value = hasta.toISOString().split('T')[0];
-  resaltarBtnGan('gan-p' + (dias===7?'7':dias===30?'30':dias===90?'90':''));
-  renderGanancias();
-}
-
-function setGanPeriodMes() {
-  ganPeriodoActivo = 'mes';
-  const hoy = new Date();
-  const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-  document.getElementById('gan-fecha-desde').value = desde.toISOString().split('T')[0];
-  document.getElementById('gan-fecha-hasta').value = hasta.toISOString().split('T')[0];
-  resaltarBtnGan('gan-pmes');
-  renderGanancias();
-}
-
-function setGanPeriodoAnio() {
-  ganPeriodoActivo = 'anio';
-  const hoy = new Date();
-  const desde = new Date(hoy.getFullYear(), 0, 1);
-  const hasta = new Date(hoy.getFullYear(), 11, 31);
-  document.getElementById('gan-fecha-desde').value = desde.toISOString().split('T')[0];
-  document.getElementById('gan-fecha-hasta').value = hasta.toISOString().split('T')[0];
-  resaltarBtnGan('gan-panio');
-  renderGanancias();
-}
-
-function resaltarBtnGan(id) {
-  ['gan-p7','gan-p30','gan-pmes','gan-p90','gan-panio'].forEach(bid => {
-    const btn = document.getElementById(bid);
-    if (btn) {
-      btn.style.background = bid === id ? 'var(--accent)' : '';
-      btn.style.color = bid === id ? 'white' : '';
-      btn.style.borderColor = bid === id ? 'var(--accent)' : '';
-    }
-  });
-}
-
-function renderGanancias() {
-  const desde = document.getElementById('gan-fecha-desde').value;
-  const hasta  = document.getElementById('gan-fecha-hasta').value;
-  if (!desde || !hasta) return;
-
-  const desdeDate = new Date(desde);
-  const hastaDate = new Date(hasta);
-  hastaDate.setHours(23,59,59);
-
-  // Filtrar pedidos Cobrado en el período
-  const pedidosFiltrados = pedidosCache.filter(p => {
-    if (p.estado !== 'Cobrado') return false;
-    if (!p.fecha) return false;
-    const fecha = new Date(p.fecha);
-    return fecha >= desdeDate && fecha <= hastaDate;
-  });
-
-  // Sumar unidades vendidas por producto
-  const ventasPorProducto = {};
-  pedidosFiltrados.forEach(p => {
-    (p.items || []).forEach(item => {
-      if (!ventasPorProducto[item.nombre]) ventasPorProducto[item.nombre] = 0;
-      ventasPorProducto[item.nombre] += item.cantidad;
-    });
-  });
-
-  // Calcular ganancia solo para productos con receta
-  const resultados = recetasCache
-    .filter(rec => rec.producto)
-    .map(rec => {
-      const costoUnit = calcularCostoReceta(rec) / rec.rendimiento;
-      const prodData = productosCache.find(p => p.nombre === rec.producto);
-      const precioVenta = prodData ? prodData.precio : 0;
-      const unidadesVendidas = ventasPorProducto[rec.producto] || 0;
-      const gananciaUnit = precioVenta - costoUnit;
-      const gananciaTotal = gananciaUnit * unidadesVendidas;
-      const margen = precioVenta > 0 ? (gananciaUnit / precioVenta * 100) : 0;
-      return { rec, costoUnit, precioVenta, unidadesVendidas, gananciaUnit, gananciaTotal, margen };
-    })
-    .sort((a, b) => b.gananciaTotal - a.gananciaTotal);
-
-  // KPIs resumen
-  const totalGanancia = resultados.reduce((s, r) => s + r.gananciaTotal, 0);
-  const totalUnidades = resultados.reduce((s, r) => s + r.unidadesVendidas, 0);
-  const totalVentas   = resultados.reduce((s, r) => s + r.precioVenta * r.unidadesVendidas, 0);
-
-  document.getElementById('gan-kpis').innerHTML = `
-    <div class="card" style="text-align:center;padding:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Ganancia total</div>
-      <div style="font-size:20px;font-weight:700;color:var(--success)">$${Math.round(totalGanancia).toLocaleString('es-AR')}</div>
-    </div>
-    <div class="card" style="text-align:center;padding:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Ventas totales</div>
-      <div style="font-size:20px;font-weight:700">$${Math.round(totalVentas).toLocaleString('es-AR')}</div>
-    </div>
-    <div class="card" style="text-align:center;padding:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Unidades vendidas</div>
-      <div style="font-size:20px;font-weight:700">${totalUnidades.toLocaleString('es-AR')}</div>
-    </div>
-    <div class="card" style="text-align:center;padding:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Margen promedio</div>
-      <div style="font-size:20px;font-weight:700;color:var(--accent)">${totalVentas > 0 ? (totalGanancia/totalVentas*100).toFixed(1) : '—'}%</div>
-    </div>
-  `;
-
-  const el = document.getElementById('lista-ganancias');
-  if (!resultados.length) {
-    el.innerHTML = '<div class="empty-msg">No hay ventas con receta en el período seleccionado.</div>';
-    return;
-  }
-
-  el.innerHTML = resultados.map(r => {
-    const margenColor = r.margen >= 60 ? '#22C55E' : r.margen >= 40 ? '#F59E0B' : '#EF4444';
-    const margenClass = r.margen >= 60 ? 'margen-ok' : r.margen >= 40 ? 'margen-warn' : 'margen-bad';
-    const margenLabel = r.margen >= 60 ? '✓ Bueno' : r.margen >= 40 ? '~ Regular' : '⚠️ Bajo';
-    return `
-    <div class="costo-row" style="border-left:4px solid ${margenColor};margin-bottom:12px">
-      <div class="costo-top">
-        <div>
-          <div class="costo-nombre">${r.rec.producto}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${r.rec.nombre} · ${r.unidadesVendidas} unidades vendidas</div>
-        </div>
-        <span class="${margenClass}" style="font-size:13px;padding:4px 10px">${margenLabel}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Ganancia/u.</div>
-          <div style="font-size:16px;font-weight:700;color:var(--success)">$${r.gananciaUnit.toFixed(0)}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Margen</div>
-          <div style="font-size:16px;font-weight:700;color:${margenColor}">${r.precioVenta > 0 ? r.margen.toFixed(0) + '%' : '—'}</div>
-        </div>
-        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Ganancia total</div>
-          <div style="font-size:16px;font-weight:700;color:var(--success)">$${Math.round(r.gananciaTotal).toLocaleString('es-AR')}</div>
-        </div>
-      </div>
-      <div style="font-size:12px;color:var(--muted)">
-        Ventas: <strong>$${Math.round(r.precioVenta * r.unidadesVendidas).toLocaleString('es-AR')}</strong>
-        · Costo: <strong>$${Math.round(r.costoUnit * r.unidadesVendidas).toLocaleString('es-AR')}</strong>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-
-
-// La app arranca cuando el usuario está autenticado
-checkAuth();
+// La app arranca cuando el PIN es correcto (ver validarPin)
 </script>
 </body>
 </html>
