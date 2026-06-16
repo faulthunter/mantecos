@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 
     if (lastData.error) throw new Error(lastData.error?.message || JSON.stringify(lastData.error));
 
-    const lastNum = lastData?.result?.CbteNro || 0;
+    const lastNum = lastData?.result?.FECompUltimoAutorizadoResult?.CbteNro || lastData?.result?.CbteNro || 0;
     const nextNum = lastNum + 1;
 
     // Paso 2: Crear el comprobante
@@ -115,11 +115,13 @@ export default async function handler(req, res) {
 
     if (caeData.error) throw new Error(caeData.error?.message || JSON.stringify(caeData.error).substring(0, 200));
 
-    const detResp = caeData?.result?.FeDetResp?.FECAEDetResponse?.[0];
+    // AFIP SDK devuelve result.FECAESolicitarResult o result directamente
+    const result = caeData?.result?.FECAESolicitarResult || caeData?.result;
+    const detResp = result?.FeDetResp?.FECAEDetResponse?.[0];
     console.log('detResp:', JSON.stringify(detResp || 'undefined'));
     
     if (!detResp) {
-      throw new Error('Sin detResp. Full result: ' + JSON.stringify(caeData?.result || caeData).substring(0, 300));
+      throw new Error('Sin detResp. Full result: ' + JSON.stringify(result || caeData).substring(0, 400));
     }
     
     if (!detResp) {
