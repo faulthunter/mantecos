@@ -116,9 +116,17 @@ export default async function handler(req, res) {
     if (caeData.error) throw new Error(caeData.error?.message || JSON.stringify(caeData.error));
 
     const detResp = caeData?.result?.FeDetResp?.FECAEDetResponse?.[0];
-    if (!detResp || detResp.Resultado !== 'A') {
+    console.log('detResp:', JSON.stringify(detResp).substring(0, 300));
+    
+    if (!detResp) {
+      throw new Error('Sin respuesta de AFIP. Resultado raw: ' + JSON.stringify(caeData?.result).substring(0, 200));
+    }
+    if (detResp.Resultado !== 'A') {
       const obs = detResp?.Observaciones?.Obs;
-      const msg = Array.isArray(obs) ? obs.map(o => o.Msg).join(', ') : (obs?.Msg || 'Error desconocido');
+      const errores = detResp?.Errores?.Err;
+      const msgObs = Array.isArray(obs) ? obs.map(o => o.Msg).join(', ') : (obs?.Msg || '');
+      const msgErr = Array.isArray(errores) ? errores.map(e => e.Msg).join(', ') : (errores?.Msg || '');
+      const msg = msgErr || msgObs || 'Resultado: ' + detResp.Resultado;
       throw new Error('AFIP rechazó: ' + msg);
     }
 
