@@ -3456,6 +3456,22 @@ async function cargarPedidosFacturacion() {
     const pedidos = todosPedidos.length > 0 ? todosPedidos : await apiGetPedidos();
     if (todosPedidos.length === 0) todosPedidos = pedidos;
 
+    // Traer facturas emitidas de Supabase para marcar pedidos ya facturados
+    try {
+      const facturasRes = await fetch(SUPA_URL + '/rest/v1/facturas?select=pedido_id,cae,nro,tipo', {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      });
+      if (facturasRes.ok) {
+        const facturasDB = await facturasRes.json();
+        if (Array.isArray(facturasDB)) {
+          facturasDB.forEach(f => {
+            const p = todosPedidos.find(p => p.id === f.pedido_id);
+            if (p) { p.facturado = true; p.cae = f.cae; p.nroFactura = f.nro; p.tipoFactura = f.tipo; }
+          });
+        }
+      }
+    } catch(e) { console.warn('No se pudieron cargar facturas:', e.message); }
+
     pedidosFacturacion = pedidos.filter(p => {
       if (!p.fecha) return false;
       if (desde && p.fecha < desde) return false;
