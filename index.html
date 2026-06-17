@@ -3480,21 +3480,19 @@ function recalcFactTotal(itemsSubtotal, envio) {
     const envioNeto   = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
     const envioIva    = envio > 0 ? Math.round((envio - envioNeto) * 100) / 100 : 0;
     totalFinal = itemsConIva + envio;
-    html = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (con IVA 21%)</span><span>$${itemsConIva.toLocaleString('es-AR')}</span></div>
-      ${envio > 0 ? \`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$${envioNeto.toLocaleString('es-AR')}</span></div>\` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$${totalFinal.toLocaleString('es-AR')}</span></div>
-    `;
+    const envioRowCon = envio > 0 ? '<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$' + envioNeto.toLocaleString('es-AR') + '</span></div>' : '';
+    html = '<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (con IVA 21%)</span><span>$' + itemsConIva.toLocaleString('es-AR') + '</span></div>'
+         + envioRowCon
+         + '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$' + totalFinal.toLocaleString('es-AR') + '</span></div>';
   } else {
     // Precio de lista YA incluye IVA → dividir cada item por 1.21 para sacar neto
     const itemsNeto = Math.round(itemsSubtotal / 1.21 * 100) / 100;
     const envioNeto = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
     totalFinal = itemsSubtotal + envio;
-    html = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (neto sin IVA)</span><span>$${itemsNeto.toLocaleString('es-AR')}</span></div>
-      ${envio > 0 ? \`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$${envioNeto.toLocaleString('es-AR')}</span></div>\` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$${totalFinal.toLocaleString('es-AR')}</span></div>
-    `;
+    const envioRowSin = envio > 0 ? '<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$' + envioNeto.toLocaleString('es-AR') + '</span></div>' : '';
+    html = '<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (neto sin IVA)</span><span>$' + itemsNeto.toLocaleString('es-AR') + '</span></div>'
+         + envioRowSin
+         + '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$' + totalFinal.toLocaleString('es-AR') + '</span></div>';
   }
   desglose.innerHTML = html;
 }
