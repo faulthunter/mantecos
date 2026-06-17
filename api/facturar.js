@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { tipo, cuitCliente, condicionIva, impTotal, conIva, userEmail, items: pedidoItems } = req.body;
+    const { tipo, cuitCliente, condicionIva, impTotal, envio: envioRaw, conIva, userEmail, items: pedidoItems } = req.body;
 
     if (!EMAILS_OK.includes(userEmail)) {
       return res.status(403).json({ error: 'No autorizado' });
@@ -36,13 +36,30 @@ export default async function handler(req, res) {
       production:   true,
     });
 
-    // Calcular importes
-    const base    = Math.round(parseFloat(impTotal) * 100) / 100;
-    const ivaAmt  = conIva ? Math.round(base * 21) / 100 : 0;
-    const total   = Math.round((base + ivaAmt) * 100) / 100;
-    // Si no hay IVA: ImpNeto=0, ImpOpEx=base (exento). Si hay IVA: ImpNeto=base, ImpOpEx=0
-    const neto    = conIva ? base : 0;
-    const opEx    = conIva ? 0 : base;
+    // Calcular importes según lógica personalizada
+    const itemsSubtotal = Math.round(parseFloat(impTotal) * 100) / 100;
+    const envio         = Math.round((parseFloat(envioRaw) || 0) * 100) / 100;
+
+    let netoItems, ivaItems, netoEnvio, ivaEnvio;
+
+    if (conIva) {
+      // Precio de lista NO incluye IVA → sumar 21% a items; envío: dividir por 1.21
+      netoItems = itemsSubtotal;
+      ivaItems  = Math.round(itemsSubtotal * 0.21 * 100) / 100;
+      netoEnvio = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
+      ivaEnvio  = envio > 0 ? Math.round((envio - netoEnvio) * 100) / 100 : 0;
+    } else {
+      // Precio de lista YA incluye IVA → dividir por 1.21 para sacar neto
+      netoItems = Math.round(itemsSubtotal / 1.21 * 100) / 100;
+      ivaItems  = Math.round((itemsSubtotal - netoItems) * 100) / 100;
+      netoEnvio = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
+      ivaEnvio  = envio > 0 ? Math.round((envio - netoEnvio) * 100) / 100 : 0;
+    }
+
+    const neto    = Math.round((netoItems + netoEnvio) * 100) / 100;
+    const ivaAmt  = Math.round((ivaItems + ivaEnvio) * 100) / 100;
+    const total   = Math.round((neto + ivaAmt) * 100) / 100;
+    const opEx    = 0; // Siempre gravado
 
     // Tipo de comprobante y receptor
     const cbteTipo  = tipo === 'A' ? 1 : 6;
