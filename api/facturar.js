@@ -174,32 +174,42 @@ export default async function handler(req, res) {
     console.log('PDF URL:', pdfResult.file);
 
     // Guardar en Supabase tabla facturas
-    const SUPA_URL = process.env.SUPA_URL || 'https://zuuvvhhpcdngvauonxms.supabase.co';
-    const SUPA_KEY = process.env.SUPA_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+    const SUPA_URL = 'https://zuuvvhhpcdngvauonxms.supabase.co';
+    // Usar anon key — RLS debe estar deshabilitado en tabla facturas
+    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+
+    const facturaPayload = {
+      pedido_id:    String(req.body.pedidoId || ''),
+      cliente:      String(req.body.cliente  || ''),
+      tipo:         String(tipo),
+      nro:          Number(result.voucherNumber),
+      punto_venta:  Number(ptoVta),
+      cae:          String(result.CAE),
+      cae_vto:      String(result.CAEFchVto),
+      total:        Number(total),
+      con_iva:      !!conIva,
+      pdf_url:      String(pdfResult.file || ''),
+      fecha_emision: now.toISOString().split('T')[0],
+    };
+    console.log('Guardando factura:', JSON.stringify(facturaPayload));
 
     try {
-      await fetch(`${SUPA_URL}/rest/v1/facturas`, {
+      const saveRes = await fetch(`${SUPA_URL}/rest/v1/facturas`, {
         method: 'POST',
         headers: {
-          'apikey': SUPA_KEY,
-          'Authorization': `Bearer ${SUPA_KEY}`,
+          'apikey': SUPA_ANON,
+          'Authorization': `Bearer ${SUPA_ANON}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({
-          pedido_id:    req.body.pedidoId || '',
-          cliente:      req.body.cliente  || '',
-          tipo,
-          nro:          result.voucherNumber,
-          punto_venta:  ptoVta,
-          cae:          String(result.CAE),
-          cae_vto:      String(result.CAEFchVto),
-          total,
-          con_iva:      !!conIva,
-          pdf_url:      pdfResult.file,
-          fecha_emision: now.toISOString().split('T')[0],
-        })
+        body: JSON.stringify(facturaPayload)
       });
+      if (!saveRes.ok) {
+        const errText = await saveRes.text();
+        console.error('Supabase error guardando factura:', saveRes.status, errText);
+      } else {
+        console.log('Factura guardada en Supabase OK');
+      }
     } catch(saveErr) {
       console.error('Error guardando factura en Supabase:', saveErr.message);
       // No interrumpir — la factura ya fue emitida en AFIP
