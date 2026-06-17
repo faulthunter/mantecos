@@ -3578,6 +3578,7 @@ async function confirmarFacturacion(id) {
         conIva,
         puntoVenta,
         pedidoId: id,
+        cliente: pedido?.cliente || '',
         userEmail,
         items: pedido?.items || []
       })
