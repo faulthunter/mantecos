@@ -174,7 +174,16 @@ export default async function handler(req, res) {
       template: { name: templateName, params: baseParams }
     };
 
-    const pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+    console.log('PDF pdfData enviado:', JSON.stringify(pdfData, null, 2));
+    let pdfResult;
+    try {
+      pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+    } catch(pdfErr) {
+      // Capturar body completo del error de Axios
+      const axiosData = pdfErr.response?.data;
+      console.error('createPDF error body:', JSON.stringify(axiosData, null, 2));
+      throw new Error('createPDF 400: ' + JSON.stringify(axiosData));
+    }
     console.log('PDF URL:', pdfResult.file);
 
     // Guardar en Supabase tabla facturas
