@@ -3414,7 +3414,10 @@ async function cargarPedidosFacturacion() {
           </div>
           <div style="text-align:right;flex-shrink:0;margin-left:12px">
             <div style="font-size:16px;font-weight:700;color:var(--accent)">$${Math.round(p.total).toLocaleString('es-AR')}</div>
-            <button onclick="abrirModalFacturar('${p.id}')" style="margin-top:8px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🧾 Facturar</button>
+            ${p.facturado
+              ? '<div style="margin-top:6px;display:inline-block;font-size:11px;font-weight:700;background:#D1FAE5;color:#065F46;padding:3px 8px;border-radius:20px">✓ FACTURADO</div><div style=\"font-size:10px;color:var(--muted);margin-top:2px\">CAE: ' + (p.cae || '') + '</div>'
+              : '<button onclick=\"abrirModalFacturar(\'' + p.id + '\')\" style=\"margin-top:8px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit\">🧾 Facturar</button>'
+            }
           </div>
         </div>
         ${p.items && p.items.length > 0 ? `
