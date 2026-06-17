@@ -841,6 +841,26 @@ canvas { width: 100% !important; }
   </div>
 </div>
 
+<!-- Modal editar cliente -->
+<div class="modal-overlay" id="modal-editar-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar cliente</span>
+      <button class="modal-close" onclick="cerrarModalCliente()">✕</button>
+    </div>
+    <label style="margin-top:0">Nombre</label>
+    <input type="text" id="edit-cli-nombre" placeholder="Nombre del cliente" />
+    <label>WhatsApp</label>
+    <input type="text" id="edit-cli-whatsapp" placeholder="Ej: 1155555555" />
+    <label>Dirección</label>
+    <input type="text" id="edit-cli-direccion" placeholder="Opcional" />
+    <label>CUIT <span style="color:var(--muted);font-weight:400;font-size:12px">formato: 20-12345678-9</span></label>
+    <input type="text" id="edit-cli-cuit" placeholder="Ej: 20-12345678-9" />
+    <button class="btn-primary" style="margin-top:16px" onclick="guardarEdicionCliente()">Guardar cambios</button>
+    <div class="status" id="status-edit-cliente"></div>
+  </div>
+</div>
+
 <!-- Modal facturar pedido -->
 <div class="modal-overlay" id="modal-facturar">
   <div class="modal" style="max-height:85vh">
@@ -2854,6 +2874,55 @@ async function confirmarParcial() {
 }
 
 // ── CLIENTES ──────────────────────────────────────────────────
+let clienteEnEdicion = null;
+
+function abrirEditarCliente(idx) {
+  const c = clientes[idx];
+  if (!c) return;
+  clienteEnEdicion = { idx, nombreOriginal: c.nombre };
+  document.getElementById('edit-cli-nombre').value    = c.nombre    || '';
+  document.getElementById('edit-cli-whatsapp').value  = c.whatsapp  || '';
+  document.getElementById('edit-cli-direccion').value = c.direccion || '';
+  document.getElementById('edit-cli-cuit').value      = c.cuit      || '';
+  document.getElementById('status-edit-cliente').className = 'status';
+  document.getElementById('modal-editar-cliente').classList.add('open');
+}
+
+function cerrarModalCliente() {
+  document.getElementById('modal-editar-cliente').classList.remove('open');
+  clienteEnEdicion = null;
+}
+
+async function guardarEdicionCliente() {
+  if (!clienteEnEdicion) return;
+  const nombre    = document.getElementById('edit-cli-nombre').value.trim();
+  const whatsapp  = document.getElementById('edit-cli-whatsapp').value.trim();
+  const direccion = document.getElementById('edit-cli-direccion').value.trim();
+  const cuit      = document.getElementById('edit-cli-cuit').value.trim();
+
+  if (!nombre) { showStatus('status-edit-cliente', 'El nombre es obligatorio.', 'err'); return; }
+
+  showLoading('Guardando cliente...');
+  try {
+    // PATCH en Supabase buscando por nombre original
+    await supa.patch('clientes', { nombre, whatsapp, direccion, cuit },
+      `nombre=eq.${encodeURIComponent(clienteEnEdicion.nombreOriginal)}`);
+    // Actualizar en memoria
+    clientes[clienteEnEdicion.idx] = { nombre, whatsapp, direccion, cuit };
+    cacheInvalidate('manteco_clientes');
+    // Actualizar selector de nuevo pedido
+    const sel = document.getElementById('sel-cliente');
+    if (sel) sel.innerHTML = '<option value="">— Seleccionar cliente —</option>' +
+      clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+    showStatus('status-edit-cliente', '✓ Cliente actualizado', 'ok');
+    renderClientes();
+    setTimeout(cerrarModalCliente, 1000);
+  } catch(e) {
+    showStatus('status-edit-cliente', 'Error: ' + e.message, 'err');
+  }
+  hideLoading();
+}
+
 function renderClientes() {
   const container = document.getElementById('lista-clientes');
   if (clientes.length === 0) {
@@ -2866,6 +2935,7 @@ function renderClientes() {
         <div class="producto-nombre">${c.nombre}</div>
         <div style="font-size:12px;color:var(--muted)">${c.whatsapp || ''} ${c.direccion ? '· ' + c.direccion : ''} ${c.cuit ? '· CUIT: ' + c.cuit : ''}</div>
       </div>
+      <button class="btn-save-precio" onclick="abrirEditarCliente(${i})" style="margin-right:6px">✏️</button>
       <button class="btn-delete-prod" onclick="eliminarCliente(${i}, '${c.nombre.replace(/'/g,"\\'")}')">✕</button>
     </div>
   `).join('');
