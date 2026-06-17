@@ -124,51 +124,54 @@ export default async function handler(req, res) {
     const condIvaStr = { RI:'Responsable Inscripto', EX:'Exento', CF:'Consumidor Final', MONO:'Monotributista' };
     const templateName = tipo === 'A' ? 'invoice-a' : 'invoice-b';
 
+    const pdfItems = Array.isArray(pedidoItems) && pedidoItems.length > 0
+      ? pedidoItems.map((it, i) => ({
+          code:        String(i + 1).padStart(3, '0'),
+          description: String(it.nombre),
+          quantity:    Number(it.cantidad) || 1,
+          unit_price:  Number(it.precio) || 0,
+          subtotal:    Math.round((Number(it.precio) || 0) * (Number(it.cantidad) || 1) * 100) / 100,
+        }))
+      : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total }];
+
+    const baseParams = {
+      voucher_number:            result.voucherNumber,
+      sales_point:               ptoVta,
+      issue_date:                fechaEmision,
+      cae_due_date:              fechaVtoCae,
+      issuer_cuit:               parseInt(CUIT),
+      cae:                       parseInt(result.CAE),
+      issuer_business_name:      'Julian Nicolas Di Lullo',
+      issuer_address:            'CABA, Buenos Aires',
+      issuer_iva_condition:      'Responsable Inscripto',
+      issuer_gross_income:       String(CUIT),
+      issuer_activity_start_date:'01/01/2020',
+      receiver_name:             tipo === 'A' ? String(req.body.cliente || cuitCliente || '-') : 'CONSUMIDOR FINAL',
+      receiver_address:          '-',
+      receiver_document_type:    docTipo,
+      receiver_document_number:  docNro,
+      receiver_iva_condition:    tipo === 'A' ? 'Responsable Inscripto' : (condIvaStr[condicionIva] || 'Consumidor Final'),
+      sale_condition:            'Contado',
+      currency_id:               'ARS',
+      currency_rate:             1,
+      concept:                   1,
+      items:                     pdfItems,
+      vat_amount:                ivaAmt,
+      tributes_amount:           0,
+      total_amount:              total,
+    };
+
+    // Factura A requiere campos extra obligatorios
+    if (tipo === 'A') {
+      baseParams.net_amount_taxed   = neto;
+      baseParams.net_amount_untaxed = 0;
+      baseParams.exempt_amount      = 0;
+      baseParams.vat_breakdown      = [{ vat_rate_id: 21, taxable_base: neto, vat_subtotal: ivaAmt }];
+    }
+
     const pdfData = {
       file_name: `factura-${tipo}-${result.voucherNumber}.pdf`,
-      template: {
-        name: templateName,
-        params: {
-          voucher_number:            result.voucherNumber,
-          sales_point:               ptoVta,
-          issue_date:                fechaEmision,
-          cae_due_date:              fechaVtoCae,
-          issuer_cuit:               parseInt(CUIT),
-          cae:                       parseInt(result.CAE),
-          issuer_business_name:      'Julian Nicolas Di Lullo',
-          issuer_address:            'CABA, Buenos Aires',
-          issuer_iva_condition:      'Responsable Inscripto',
-          issuer_gross_income:       String(CUIT),
-          issuer_activity_start_date:'01/01/2020',
-          receiver_name:             tipo === 'A' ? (cuitCliente || '-') : 'CONSUMIDOR FINAL',
-          receiver_address:          '-',
-          receiver_document_type:    docTipo,
-          receiver_document_number:  docNro,
-          receiver_iva_condition:    condIvaStr[condicionIva] || 'Consumidor Final',
-          sale_condition:            'Contado',
-          currency_id:               'ARS',
-          currency_rate:             1,
-          concept:                   1,
-          items: Array.isArray(pedidoItems) && pedidoItems.length > 0
-            ? pedidoItems.map((it, i) => ({
-                code:        String(i + 1).padStart(3, '0'),
-                description: String(it.nombre),
-                quantity:    Number(it.cantidad) || 1,
-                unit_price:  Number(it.precio) || 0,
-                subtotal:    Math.round((Number(it.precio) || 0) * (Number(it.cantidad) || 1) * 100) / 100,
-              }))
-            : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total }],
-          vat_amount:      ivaAmt,
-          tributes_amount: 0,
-          total_amount:    total,
-          ...(tipo === 'A' && {
-            net_amount_taxed:   neto,
-            net_amount_untaxed: 0,
-            exempt_amount:      opEx,
-            vat_breakdown: ivaAmt > 0 ? [{ vat_rate_id: 21, taxable_base: neto, vat_subtotal: ivaAmt }] : [],
-          }),
-        }
-      }
+      template: { name: templateName, params: baseParams }
     };
 
     const pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
