@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { tipo, cuitCliente, condicionIva, impTotal, conIva, userEmail } = req.body;
+    const { tipo, cuitCliente, condicionIva, impTotal, conIva, userEmail, items: pedidoItems } = req.body;
 
     if (!EMAILS_OK.includes(userEmail)) {
       return res.status(403).json({ error: 'No autorizado' });
@@ -131,15 +131,15 @@ export default async function handler(req, res) {
           currency_id:               'ARS',
           currency_rate:             1,
           concept:                   1,
-          items: [
-            {
-              code:        '001',
-              description: 'Productos de panadería artesanal',
-              quantity:    1,
-              unit_price:  total,
-              subtotal:    total,
-            }
-          ],
+          items: Array.isArray(pedidoItems) && pedidoItems.length > 0
+            ? pedidoItems.map((it, i) => ({
+                code:        String(i + 1).padStart(3, '0'),
+                description: String(it.nombre),
+                quantity:    Number(it.cantidad) || 1,
+                unit_price:  Number(it.precio) || 0,
+                subtotal:    Math.round((Number(it.precio) || 0) * (Number(it.cantidad) || 1) * 100) / 100,
+              }))
+            : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total }],
           vat_amount:      ivaAmt,
           tributes_amount: 0,
           total_amount:    total,
