@@ -185,7 +185,40 @@ export default async function handler(req, res) {
       console.error('createPDF error body:', JSON.stringify(axiosData, null, 2));
       throw new Error('createPDF 400: ' + JSON.stringify(axiosData));
     }
-    console.log('PDF URL:', pdfResult.file);
+    console.log('PDF URL temporal AfipSDK:', pdfResult.file);
+
+    // Descargar PDF desde AfipSDK y subir a Supabase Storage para URL permanente
+    let pdfUrlFinal = pdfResult.file;
+    try {
+      const pdfResponse = await fetch(pdfResult.file);
+      if (pdfResponse.ok) {
+        const pdfBuffer = await pdfResponse.arrayBuffer();
+        const pdfBytes  = new Uint8Array(pdfBuffer);
+        const fileName  = pdfData.file_name;
+        const uploadRes = await fetch(
+          `${SUPA_URL}/storage/v1/object/facturas/${fileName}`,
+          {
+            method: 'POST',
+            headers: {
+              'apikey':        SUPA_ANON,
+              'Authorization': `Bearer ${SUPA_ANON}`,
+              'Content-Type':  'application/pdf',
+              'x-upsert':      'true',
+            },
+            body: pdfBytes
+          }
+        );
+        if (uploadRes.ok) {
+          pdfUrlFinal = `${SUPA_URL}/storage/v1/object/public/facturas/${fileName}`;
+          console.log('PDF subido a Supabase Storage:', pdfUrlFinal);
+        } else {
+          const uploadErr = await uploadRes.text();
+          console.error('Error subiendo PDF a Supabase Storage:', uploadErr);
+        }
+      }
+    } catch(uploadErr) {
+      console.error('Error descargando/subiendo PDF:', uploadErr.message);
+    }
 
     // Guardar en Supabase tabla facturas
     const SUPA_URL = 'https://zuuvvhhpcdngvauonxms.supabase.co';
@@ -238,7 +271,7 @@ export default async function handler(req, res) {
       tipo,
       total,
       puntoVenta:     ptoVta,
-      pdfUrl:         pdfResult.file,
+      pdfUrl:         pdfUrlFinal,
     });
 
   } catch (e) {
