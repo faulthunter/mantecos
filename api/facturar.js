@@ -176,6 +176,10 @@ export default async function handler(req, res) {
     };
 
     console.log('PDF pdfData enviado:', JSON.stringify(pdfData, null, 2));
+    // Supabase config — necesario antes del upload del PDF
+    const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
+    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+
     let pdfResult;
     try {
       pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
