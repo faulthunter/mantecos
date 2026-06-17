@@ -3570,6 +3570,18 @@ function onFactTipoChange(clienteNombre, itemsSubtotal, envio) {
   const tipo = document.getElementById('fact-tipo').value;
   const wrap = document.getElementById('fact-cuit-wrap');
   if (wrap) wrap.style.display = tipo === 'A' ? 'block' : 'none';
+  // Para Factura A: condición IVA receptor siempre RI
+  const selCondicion = document.getElementById('fact-condicion-iva');
+  if (selCondicion) {
+    if (tipo === 'A') {
+      selCondicion.value = 'RI';
+      selCondicion.disabled = true;
+      selCondicion.style.opacity = '0.6';
+    } else {
+      selCondicion.disabled = false;
+      selCondicion.style.opacity = '1';
+    }
+  }
   recalcFactTotal(itemsSubtotal, envio);
 }
 
