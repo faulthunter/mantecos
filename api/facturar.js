@@ -214,10 +214,10 @@ export default async function handler(req, res) {
         );
         if (uploadRes.ok) {
           pdfUrlFinal = `${SUPA_URL}/storage/v1/object/public/facturas/${fileName}`;
-          console.log('PDF subido a Supabase Storage:', pdfUrlFinal);
+          console.log('PDF subido a Supabase Storage OK:', pdfUrlFinal);
         } else {
           const uploadErr = await uploadRes.text();
-          console.error('Error subiendo PDF a Supabase Storage:', uploadErr);
+          console.error('Error subiendo PDF a Supabase Storage status:', uploadRes.status, uploadErr);
         }
       }
     } catch(uploadErr) {
