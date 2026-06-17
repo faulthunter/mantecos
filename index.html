@@ -925,6 +925,8 @@ canvas { width: 100% !important; }
         <input type="text" id="nuevo-cli-whatsapp" placeholder="Ej: 1155555555" />
         <label>Dirección</label>
         <input type="text" id="nuevo-cli-direccion" placeholder="Opcional" />
+        <label>CUIT (solo Factura A) <span style="color:var(--muted);font-weight:400">formato: 20-12345678-9</span></label>
+        <input type="text" id="nuevo-cli-cuit" placeholder="Ej: 20-12345678-9" />
         <button class="btn-primary" onclick="agregarCliente()" style="margin-top:12px">+ Agregar</button>
         <div class="status" id="status-cli-nuevo"></div>
       </div>
@@ -1413,8 +1415,8 @@ async function apiEliminarProducto(nombre) {
   return { ok: true };
 }
 
-async function apiAgregarCliente(nombre, whatsapp, direccion) {
-  await supa.post('clientes', { nombre, whatsapp, direccion });
+async function apiAgregarCliente(nombre, whatsapp, direccion, cuit) {
+  await supa.post('clientes', { nombre, whatsapp, direccion, cuit: cuit || '' });
   return { ok: true };
 }
 
@@ -2822,7 +2824,7 @@ function renderClientes() {
     <div class="producto-row" id="cli-row-${i}">
       <div style="flex:1">
         <div class="producto-nombre">${c.nombre}</div>
-        <div style="font-size:12px;color:var(--muted)">${c.whatsapp || ''} ${c.direccion ? '· ' + c.direccion : ''}</div>
+        <div style="font-size:12px;color:var(--muted)">${c.whatsapp || ''} ${c.direccion ? '· ' + c.direccion : ''} ${c.cuit ? '· CUIT: ' + c.cuit : ''}</div>
       </div>
       <button class="btn-delete-prod" onclick="eliminarCliente(${i}, '${c.nombre.replace(/'/g,"\\'")}')">✕</button>
     </div>
@@ -2833,15 +2835,16 @@ async function agregarCliente() {
   const nombre    = document.getElementById('nuevo-cli-nombre').value.trim();
   const whatsapp  = document.getElementById('nuevo-cli-whatsapp').value.trim();
   const direccion = document.getElementById('nuevo-cli-direccion').value.trim();
+  const cuit      = document.getElementById('nuevo-cli-cuit').value.trim();
   if (!nombre) { showStatus('status-cli-nuevo', 'Ingresá un nombre.', 'err'); return; }
   if (clientes.find(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
     showStatus('status-cli-nuevo', 'Ya existe un cliente con ese nombre.', 'err'); return;
   }
   showLoading('Agregando cliente...');
   try {
-    const res = await apiAgregarCliente(nombre, whatsapp, direccion);
+    const res = await apiAgregarCliente(nombre, whatsapp, direccion, cuit);
     if (res.error) throw new Error(res.error);
-    clientes.push({ nombre, whatsapp, direccion });
+    clientes.push({ nombre, whatsapp, direccion, cuit });
     cacheInvalidate('manteco_clientes');
     // Actualizar también el select de nuevo pedido
     const sel = document.getElementById('sel-cliente');
@@ -2850,6 +2853,7 @@ async function agregarCliente() {
     document.getElementById('nuevo-cli-nombre').value = '';
     document.getElementById('nuevo-cli-whatsapp').value = '';
     document.getElementById('nuevo-cli-direccion').value = '';
+    document.getElementById('nuevo-cli-cuit').value = '';
     renderClientes();
     showStatus('status-cli-nuevo', '✓ Cliente agregado', 'ok');
   } catch(e) {
@@ -3400,6 +3404,12 @@ function abrirModalFacturar(id) {
   const subtotal = Number(pedido.total) || 0;
   const conIva = false;
 
+  // Buscar CUIT del cliente en la lista
+  const clienteData = clientes.find(c => c.nombre === pedido.cliente);
+  const cuitCliente = clienteData?.cuit || '';
+  const envio = Number(pedido.envio) || 0;
+  const itemsSubtotal = (pedido.items || []).reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
+
   document.getElementById('modal-facturar-body').innerHTML = `
     <div style="margin-bottom:16px">
       <div style="font-size:15px;font-weight:600">${pedido.cliente}</div>
@@ -3407,13 +3417,16 @@ function abrirModalFacturar(id) {
     </div>
 
     <label style="margin-top:0">Tipo de factura</label>
-    <select id="fact-tipo">
+    <select id="fact-tipo" onchange="onFactTipoChange('${pedido.cliente}', ${itemsSubtotal}, ${envio})">
       <option value="B">Factura B (Consumidor Final / Monotributista)</option>
       <option value="A">Factura A (Responsable Inscripto)</option>
     </select>
 
-    <label>CUIT del cliente (solo Factura A)</label>
-    <input type="text" id="fact-cuit" placeholder="Ej: 20-12345678-9" />
+    <div id="fact-cuit-wrap" style="display:none">
+      <label>CUIT del cliente</label>
+      <input type="text" id="fact-cuit" value="${cuitCliente}" placeholder="Ej: 20-12345678-9" readonly style="background:var(--bg);color:${cuitCliente ? 'var(--text)' : 'var(--error)'}" />
+      ${!cuitCliente ? '<div style="font-size:12px;color:var(--error);margin-top:4px">⚠️ Este cliente no tiene CUIT cargado. Agregalo en Config → Clientes antes de facturar.</div>' : ''}
+    </div>
 
     <label>Condición IVA del cliente</label>
     <select id="fact-condicion-iva">
@@ -3424,51 +3437,82 @@ function abrirModalFacturar(id) {
     </select>
 
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;margin-top:8px;border-top:1px solid var(--border)">
-      <input type="checkbox" id="fact-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="recalcFactTotal(${subtotal})" />
-      <label for="fact-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Incluir IVA (21%)</label>
+      <input type="checkbox" id="fact-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="recalcFactTotal(${itemsSubtotal}, ${envio})" />
+      <label for="fact-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Precio de lista no incluye IVA (sumar 21%)</label>
     </div>
 
-    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px">
-        <span>Subtotal</span><span>$${Math.round(subtotal).toLocaleString('es-AR')}</span>
-      </div>
-      <div id="fact-iva-row" style="display:none;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px">
-        <span>IVA 21%</span><span id="fact-iva-monto">$0</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
-        <span>Total a facturar</span><span style="color:var(--accent)" id="fact-total-display">$${Math.round(subtotal).toLocaleString('es-AR')}</span>
-      </div>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px" id="fact-desglose">
     </div>
 
-    <button class="btn-primary" onclick="confirmarFacturacion('${id}', ${subtotal})">🧾 Confirmar y facturar</button>
+    <button class="btn-primary" onclick="confirmarFacturacion('${id}')">🧾 Confirmar y facturar</button>
     <div class="status" id="status-facturar"></div>
   `;
+
+  recalcFactTotal(itemsSubtotal, envio);
 
   document.getElementById('modal-facturar').classList.add('open');
 }
 
-function recalcFactTotal(subtotal) {
-  const conIva = document.getElementById('fact-check-iva').checked;
-  const iva = conIva ? Math.round(subtotal * 0.21) : 0;
-  const total = subtotal + iva;
-  document.getElementById('fact-iva-row').style.display = conIva ? 'flex' : 'none';
-  document.getElementById('fact-iva-monto').textContent = '$' + iva.toLocaleString('es-AR');
-  document.getElementById('fact-total-display').textContent = '$' + Math.round(total).toLocaleString('es-AR');
+function onFactTipoChange(clienteNombre, itemsSubtotal, envio) {
+  const tipo = document.getElementById('fact-tipo').value;
+  const wrap = document.getElementById('fact-cuit-wrap');
+  if (wrap) wrap.style.display = tipo === 'A' ? 'block' : 'none';
+  recalcFactTotal(itemsSubtotal, envio);
+}
+
+function recalcFactTotal(itemsSubtotal, envio) {
+  const conIva = document.getElementById('fact-check-iva') && document.getElementById('fact-check-iva').checked;
+  const desglose = document.getElementById('fact-desglose');
+  if (!desglose) return;
+
+  let html = '';
+  let totalFinal = 0;
+
+  if (conIva) {
+    // Precio de lista NO incluye IVA → sumar 21% a cada item, al envío dividir por 1.21
+    const itemsConIva = Math.round(itemsSubtotal * 1.21);
+    const envioNeto   = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
+    const envioIva    = envio > 0 ? Math.round((envio - envioNeto) * 100) / 100 : 0;
+    totalFinal = itemsConIva + envio;
+    html = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (con IVA 21%)</span><span>$${itemsConIva.toLocaleString('es-AR')}</span></div>
+      ${envio > 0 ? \`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$${envioNeto.toLocaleString('es-AR')}</span></div>\` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$${totalFinal.toLocaleString('es-AR')}</span></div>
+    `;
+  } else {
+    // Precio de lista YA incluye IVA → dividir cada item por 1.21 para sacar neto
+    const itemsNeto = Math.round(itemsSubtotal / 1.21 * 100) / 100;
+    const envioNeto = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
+    totalFinal = itemsSubtotal + envio;
+    html = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Items (neto sin IVA)</span><span>$${itemsNeto.toLocaleString('es-AR')}</span></div>
+      ${envio > 0 ? \`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)"><span>Envío neto (÷1.21)</span><span>$${envioNeto.toLocaleString('es-AR')}</span></div>\` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span>Total a facturar</span><span style="color:var(--accent)">$${totalFinal.toLocaleString('es-AR')}</span></div>
+    `;
+  }
+  desglose.innerHTML = html;
 }
 
 function cerrarModalFacturar() {
   document.getElementById('modal-facturar').classList.remove('open');
 }
 
-async function confirmarFacturacion(id, subtotal) {
+async function confirmarFacturacion(id) {
+  const pedido = todosPedidos.find(p => p.id === id) || pedidosFacturacion.find(p => p.id === id);
   const tipo = document.getElementById('fact-tipo').value;
-  const cuitCliente = document.getElementById('fact-cuit').value.trim();
   const condicion = document.getElementById('fact-condicion-iva').value;
   const conIva = document.getElementById('fact-check-iva').checked;
   const puntoVenta = 10;
 
+  // Calcular importes con la lógica correcta
+  const envio = Number(pedido?.envio) || 0;
+  const itemsSubtotal = (pedido?.items || []).reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
+
+  // Validar CUIT para Factura A
+  const clienteData = clientes.find(c => c.nombre === (pedido?.cliente || ''));
+  const cuitCliente = clienteData?.cuit || '';
   if (tipo === 'A' && !cuitCliente) {
-    showStatus('status-facturar', 'Ingresá el CUIT del cliente para Factura A.', 'err');
+    showStatus('status-facturar', '⚠️ El cliente no tiene CUIT cargado. Agregalo en Config → Clientes.', 'err');
     return;
   }
 
@@ -3487,12 +3531,13 @@ async function confirmarFacturacion(id, subtotal) {
         tipo,
         cuitCliente,
         condicionIva: condicion,
-        impTotal: subtotal,
+        impTotal: itemsSubtotal,
+        envio,
         conIva,
         puntoVenta,
         pedidoId: id,
         userEmail,
-        items: (todosPedidos.find(p => p.id === id) || pedidosFacturacion.find(p => p.id === id))?.items || []
+        items: pedido?.items || []
       })
     });
 
