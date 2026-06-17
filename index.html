@@ -774,33 +774,68 @@ canvas { width: 100% !important; }
 <div class="page" id="page-facturacion">
   <div style="margin-top:16px">
 
-    <!-- Filtro por fecha -->
-    <div class="card">
-      <div class="card-title">Filtrar pedidos</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="date" id="fact-desde" style="flex:1" />
-        <span style="color:var(--muted);font-size:13px">→</span>
-        <input type="date" id="fact-hasta" style="flex:1" />
-        <button class="btn-primary" onclick="cargarPedidosFacturacion()" style="width:auto;padding:10px 16px">Buscar</button>
+    <!-- Solapas -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+      <button id="ftab-btn-pedidos" onclick="showFactTab('pedidos')"
+        style="flex:1;padding:10px 6px;border:none;background:none;font-size:14px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer;font-family:inherit">
+        📋 Pedidos a facturar
+      </button>
+      <button id="ftab-btn-historial" onclick="showFactTab('historial')"
+        style="flex:1;padding:10px 6px;border:none;background:none;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:inherit">
+        🧾 Historial de facturas
+      </button>
+    </div>
+
+    <!-- SOLAPA: PEDIDOS A FACTURAR -->
+    <div id="ftab-pedidos">
+      <div class="card">
+        <div class="card-title">Filtrar pedidos</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="fact-desde" style="flex:1" />
+          <span style="color:var(--muted);font-size:13px">→</span>
+          <input type="date" id="fact-hasta" style="flex:1" />
+          <button class="btn-primary" onclick="cargarPedidosFacturacion()" style="width:auto;padding:10px 16px">Buscar</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="period-btn active" id="fact-btn-mes" onclick="setFactPeriodo('mes',this)">Este mes</button>
+          <button class="period-btn" onclick="setFactPeriodo('7d',this)">7 días</button>
+          <button class="period-btn" onclick="setFactPeriodo('30d',this)">30 días</button>
+          <button class="period-btn" onclick="setFactPeriodo('todos',this)">Todos</button>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        <button class="period-btn active" id="fact-btn-mes" onclick="setFactPeriodo('mes',this)">Este mes</button>
-        <button class="period-btn" onclick="setFactPeriodo('7d',this)">7 días</button>
-        <button class="period-btn" onclick="setFactPeriodo('30d',this)">30 días</button>
-        <button class="period-btn" onclick="setFactPeriodo('todos',this)">Todos</button>
+      <div id="fact-resumen" style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
+        <span style="font-size:15px;font-weight:700;color:var(--accent)" id="fact-resumen-total">$0</span>
+      </div>
+      <div id="lista-facturacion">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Seleccioná un período para ver los pedidos.</div>
       </div>
     </div>
 
-    <!-- Resumen -->
-    <div id="fact-resumen" style="display:none;background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
-      <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
-      <span style="font-size:15px;font-weight:700;color:var(--accent)" id="fact-resumen-total">$0</span>
-    </div>
-
-    <!-- Listado -->
-    <div id="lista-facturacion">
-      <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">
-        Seleccioná un período para ver los pedidos.
+    <!-- SOLAPA: HISTORIAL DE FACTURAS -->
+    <div id="ftab-historial" style="display:none">
+      <div class="card">
+        <div class="card-title">Filtrar facturas emitidas</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="hist-desde" style="flex:1" />
+          <span style="color:var(--muted);font-size:13px">→</span>
+          <input type="date" id="hist-hasta" style="flex:1" />
+          <button class="btn-primary" onclick="cargarHistorialFacturas()" style="width:auto;padding:10px 16px">Buscar</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="period-btn active" id="hist-btn-mes" onclick="setHistPeriodo('mes',this)">Este mes</button>
+          <button class="period-btn" onclick="setHistPeriodo('7d',this)">7 días</button>
+          <button class="period-btn" onclick="setHistPeriodo('30d',this)">30 días</button>
+          <button class="period-btn" onclick="setHistPeriodo('todos',this)">Todos</button>
+        </div>
+      </div>
+      <!-- KPIs historial -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="hist-kpis" style="display:none">
+        <div class="kpi-card"><div class="kpi-label">Total facturado</div><div class="kpi-value accent" id="hist-kpi-total">$0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Facturas emitidas</div><div class="kpi-value" id="hist-kpi-count">0</div></div>
+      </div>
+      <div id="lista-historial-facturas">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Seleccioná un período para ver las facturas.</div>
       </div>
     </div>
 
@@ -3554,6 +3589,11 @@ async function confirmarFacturacion(id) {
       'ok'
     );
     if (btn) btn.textContent = '✓ Facturado';
+    // Marcar pedido como facturado en memoria para que aparezca el badge
+    const pedidoFact = todosPedidos.find(p => p.id === id) || pedidosFacturacion.find(p => p.id === id);
+    if (pedidoFact) { pedidoFact.facturado = true; pedidoFact.cae = data.CAE; }
+    // Refrescar lista de pedidos para mostrar badge
+    if (typeof cargarPedidosFacturacion === 'function') cargarPedidosFacturacion();
     if (data.pdfUrl) {
       // Inyectar botón de descarga — window.open es bloqueado por popup blocker en async
       const statusEl = document.getElementById('status-facturar');
@@ -3574,6 +3614,87 @@ async function confirmarFacturacion(id) {
   }
 }
 
+
+function showFactTab(tab) {
+  document.getElementById('ftab-pedidos').style.display   = tab === 'pedidos'   ? 'block' : 'none';
+  document.getElementById('ftab-historial').style.display = tab === 'historial'  ? 'block' : 'none';
+  const btnPed  = document.getElementById('ftab-btn-pedidos');
+  const btnHist = document.getElementById('ftab-btn-historial');
+  btnPed.style.color        = tab === 'pedidos'  ? 'var(--accent)' : 'var(--muted)';
+  btnPed.style.borderBottomColor  = tab === 'pedidos'  ? 'var(--accent)' : 'transparent';
+  btnPed.style.fontWeight   = tab === 'pedidos'  ? '600' : '500';
+  btnHist.style.color       = tab === 'historial' ? 'var(--accent)' : 'var(--muted)';
+  btnHist.style.borderBottomColor = tab === 'historial' ? 'var(--accent)' : 'transparent';
+  btnHist.style.fontWeight  = tab === 'historial' ? '600' : '500';
+  if (tab === 'historial') cargarHistorialFacturas();
+}
+
+let histFactPeriodo = 'mes';
+
+function setHistPeriodo(p, btn) {
+  document.querySelectorAll('#ftab-historial .period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  histFactPeriodo = p;
+  const hoy = new Date();
+  let desde = new Date();
+  if (p === '7d')  { desde.setDate(hoy.getDate() - 6); }
+  else if (p === '30d') { desde.setDate(hoy.getDate() - 29); }
+  else if (p === 'mes') { desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1); }
+  else if (p === 'todos') { desde = new Date('2020-01-01'); }
+  document.getElementById('hist-desde').value = desde.toISOString().split('T')[0];
+  document.getElementById('hist-hasta').value = hoy.toISOString().split('T')[0];
+  cargarHistorialFacturas();
+}
+
+async function cargarHistorialFacturas() {
+  const desde = document.getElementById('hist-desde').value;
+  const hasta = document.getElementById('hist-hasta').value;
+  const container = document.getElementById('lista-historial-facturas');
+  container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Cargando...</div>';
+
+  try {
+    let url = SUPA_URL + '/rest/v1/facturas?order=created_at.desc';
+    if (desde) url += '&fecha_emision=gte.' + desde;
+    if (hasta) url += '&fecha_emision=lte.' + hasta;
+
+    const res = await fetch(url, { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } });
+    const facturas = await res.json();
+
+    if (!Array.isArray(facturas) || facturas.length === 0) {
+      document.getElementById('hist-kpis').style.display = 'none';
+      container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">No hay facturas en ese período.</div>';
+      return;
+    }
+
+    const totalFacturado = facturas.reduce((s, f) => s + (Number(f.total) || 0), 0);
+    document.getElementById('hist-kpis').style.display = 'grid';
+    document.getElementById('hist-kpi-total').textContent = '$' + Math.round(totalFacturado).toLocaleString('es-AR');
+    document.getElementById('hist-kpi-count').textContent = facturas.length;
+
+    container.innerHTML = facturas.map(f => {
+      const nroFmt = String(f.punto_venta || 10).padStart(4,'0') + '-' + String(f.nro || 0).padStart(8,'0');
+      const fecha  = f.fecha_emision || f.created_at?.split('T')[0] || '-';
+      const pdfBtn = f.pdf_url
+        ? '<a href="' + f.pdf_url + '" target="_blank" rel="noopener" style="padding:6px 12px;background:var(--accent);color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">📄 PDF</a>'
+        : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);gap:8px">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:15px;font-weight:600;white-space:nowrap">Fcta. ' + (f.tipo || 'B') + ' N° ' + nroFmt + '</div>'
+        + '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + (f.cliente || '-') + ' · ' + fecha + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px">CAE: ' + (f.cae || '-') + ' · Vto: ' + (f.cae_vto || '-') + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:1px">Pedido: ' + (f.pedido_id || '-') + (f.con_iva ? ' · Con IVA' : '') + '</div>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
+        + '<span style="font-size:15px;font-weight:700;color:var(--accent)">$' + Math.round(f.total || 0).toLocaleString('es-AR') + '</span>'
+        + pdfBtn
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--error);font-size:13px;text-align:center;padding:24px">Error: ' + e.message + '</div>';
+  }
+}
 
 async function loginConGoogle() {
   const btn = document.getElementById('btn-google-login');
