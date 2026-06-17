@@ -131,8 +131,9 @@ export default async function handler(req, res) {
           quantity:    Number(it.cantidad) || 1,
           unit_price:  Number(it.precio) || 0,
           subtotal:    Math.round((Number(it.precio) || 0) * (Number(it.cantidad) || 1) * 100) / 100,
+          ...(tipo === 'A' && { vat_rate: 21 }),  // Factura A requiere alícuota IVA por item
         }))
-      : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total }];
+      : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total, ...(tipo === 'A' && { vat_rate: 21 }) }];
 
     const baseParams = {
       voucher_number:            result.voucherNumber,
