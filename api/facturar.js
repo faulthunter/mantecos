@@ -239,7 +239,7 @@ export default async function handler(req, res) {
       cae_vto:      String(result.CAEFchVto),
       total:        Number(total),
       con_iva:      !!conIva,
-      pdf_url:      String(pdfResult.file || ''),
+      pdf_url:      String(pdfUrlFinal || ''),
       fecha_emision: now.toISOString().split('T')[0],
     };
     console.log('Guardando factura:', JSON.stringify(facturaPayload));
