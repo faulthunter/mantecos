@@ -3491,7 +3491,8 @@ async function confirmarFacturacion(id, subtotal) {
         conIva,
         puntoVenta,
         pedidoId: id,
-        userEmail
+        userEmail,
+        items: (todosPedidos.find(p => p.id === id) || pedidosFacturacion.find(p => p.id === id))?.items || []
       })
     });
 
