@@ -197,7 +197,7 @@ export default async function handler(req, res) {
       const pdfResponse = await fetch(pdfResult.file);
       if (pdfResponse.ok) {
         const pdfBuffer = await pdfResponse.arrayBuffer();
-        const pdfBytes  = new Uint8Array(pdfBuffer);
+        const pdfBytes  = Buffer.from(pdfBuffer);
         const fileName  = pdfData.file_name;
         const uploadRes = await fetch(
           `${SUPA_URL}/storage/v1/object/facturas/${fileName}`,
@@ -224,10 +224,7 @@ export default async function handler(req, res) {
       console.error('Error descargando/subiendo PDF:', uploadErr.message);
     }
 
-    // Guardar en Supabase tabla facturas
-    const SUPA_URL = 'https://zuuvvhhpcdngvauonxms.supabase.co';
-    // Usar anon key — RLS debe estar deshabilitado en tabla facturas
-    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+    // Guardar en Supabase tabla facturas (SUPA_URL y SUPA_ANON ya definidos arriba)
 
     const facturaPayload = {
       pedido_id:    String(req.body.pedidoId || ''),
