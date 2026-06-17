@@ -67,8 +67,9 @@ export default async function handler(req, res) {
     const docNro    = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
     // condicionIva → CondicionIVAReceptorId
+    // Para Factura A el receptor SIEMPRE debe ser RI (id:1) — AFIP error 10243 si no
     const condMap   = { RI: 1, EX: 4, CF: 5, MONO: 6 };
-    const condIvaId = condMap[condicionIva] || 5;
+    const condIvaId = tipo === 'A' ? 1 : (condMap[condicionIva] || 5);
 
     const ptoVta = 10;
     // Fecha local Argentina (UTC-3) para evitar que de madrugada tome el día anterior
