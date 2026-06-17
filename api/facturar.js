@@ -196,6 +196,7 @@ export default async function handler(req, res) {
       fecha_emision: now.toISOString().split('T')[0],
     };
     console.log('Guardando factura:', JSON.stringify(facturaPayload));
+    console.log('PDF baseParams:', JSON.stringify(baseParams, null, 2));
 
     try {
       const saveRes = await fetch(`${SUPA_URL}/rest/v1/facturas`, {
@@ -231,7 +232,8 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    console.error('Error facturar:', e.message, e.data || '');
+    console.error('Error facturar:', e.message, JSON.stringify(e.data || e.response?.data || {}, null, 2));
+    console.error('Error facturar full:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
     return res.status(500).json({ error: e.message, detail: e.data || null });
   }
 }
