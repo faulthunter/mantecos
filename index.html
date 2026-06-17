@@ -2905,10 +2905,14 @@ async function guardarEdicionCliente() {
   showLoading('Guardando cliente...');
   try {
     // PATCH en Supabase buscando por nombre original
-    await supa.patch('clientes', { nombre, whatsapp, direccion, cuit },
+    // Solo incluir cuit en el PATCH si el campo tiene valor — evita pisar un CUIT existente con vacío
+    const patchData = { nombre, whatsapp, direccion };
+    if (cuit) patchData.cuit = cuit;
+    await supa.patch('clientes', patchData,
       `nombre=eq.${encodeURIComponent(clienteEnEdicion.nombreOriginal)}`);
-    // Actualizar en memoria
-    clientes[clienteEnEdicion.idx] = { nombre, whatsapp, direccion, cuit };
+    // Actualizar en memoria — preservar cuit existente si no se cambió
+    const cuitFinal = cuit || clientes[clienteEnEdicion.idx].cuit || '';
+    clientes[clienteEnEdicion.idx] = { nombre, whatsapp, direccion, cuit: cuitFinal };
     cacheInvalidate('manteco_clientes');
     // Actualizar selector de nuevo pedido
     const sel = document.getElementById('sel-cliente');
