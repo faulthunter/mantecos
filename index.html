@@ -3505,7 +3505,15 @@ async function confirmarFacturacion(id, subtotal) {
     );
     if (btn) btn.textContent = '✓ Facturado';
     if (data.pdfUrl) {
-      window.open(data.pdfUrl, '_blank');
+      // Inyectar botón de descarga — window.open es bloqueado por popup blocker en async
+      const statusEl = document.getElementById('status-facturar');
+      const dlBtn = document.createElement('a');
+      dlBtn.href = data.pdfUrl;
+      dlBtn.target = '_blank';
+      dlBtn.rel = 'noopener noreferrer';
+      dlBtn.textContent = '📄 Descargar PDF';
+      dlBtn.style.cssText = 'display:block;margin-top:12px;padding:10px 16px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);text-align:center;font-weight:600;font-size:14px;text-decoration:none;font-family:inherit;';
+      statusEl.after(dlBtn);
     }
 
   } catch(e) {
