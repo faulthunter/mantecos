@@ -4447,6 +4447,45 @@ function renderGanancias() {
 
 
 // La app arranca cuando el usuario está autenticado
+// onAuthStateChange detecta tanto la sesión persistida en localStorage
+// como el token que llega por redirect de Google OAuth
+supabaseAuth.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    if (session) {
+      // Ya hay sesión — procesar igual que checkAuth
+      const email = session.user.email;
+      if (!EMAILS_PERMITIDOS.includes(email)) {
+        supabaseAuth.auth.signOut();
+        document.getElementById('pin-overlay').innerHTML = `
+          <div class="pin-logo">🔒</div>
+          <div class="pin-title">Acceso denegado</div>
+          <div class="pin-sub" style="color:var(--error);margin-top:8px">${email} no tiene permiso.</div>
+          <button onclick="loginConGoogle()" style="margin-top:24px;padding:12px 24px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Intentar con otra cuenta</button>
+        `;
+        return;
+      }
+      const nombre = session.user.user_metadata?.name?.split(' ')[0] || '';
+      const overlay = document.getElementById('pin-overlay');
+      if (!overlay.classList.contains('hidden')) {
+        overlay.innerHTML = `
+          <div class="pin-logo">🥐</div>
+          <div class="pin-title">¡Bienvenido${nombre ? ', ' + nombre : ''}!</div>
+          <div class="pin-sub">Sistema Manteco</div>
+        `;
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          if (typeof init === 'function') init();
+        }, 900);
+      }
+    } else {
+      // Sin sesión — mostrar pantalla de login
+      const overlay = document.getElementById('pin-overlay');
+      if (overlay) overlay.style.display = 'flex';
+    }
+  }
+});
+
+// Fallback: si onAuthStateChange no dispara (navegadores que bloquean storage events)
 checkAuth();
 </script>
 </body>
