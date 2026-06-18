@@ -124,6 +124,30 @@ export default async function handler(req, res) {
     const condIvaStr = { RI:'Responsable Inscripto', EX:'Exento', CF:'Consumidor Final', MONO:'Monotributista' };
     const templateName = tipo === 'A' ? 'invoice-a' : 'invoice-b';
 
+    // Para Factura A: consultar razón social y domicilio del padrón AFIP
+    let receiverName    = tipo === 'A' ? String(req.body.cliente || cuitCliente || '-') : 'CONSUMIDOR FINAL';
+    let receiverAddress = '-';
+    if (tipo === 'A' && docNro) {
+      try {
+        const padronData = await afip.RegisterScopeThirteen.getTaxpayerDetails(docNro);
+        if (padronData) {
+          const rs = padronData.datosGenerales?.razonSocial
+            || (padronData.datosGenerales?.nombre
+                ? (padronData.datosGenerales.nombre + ' ' + (padronData.datosGenerales.apellido || '')).trim()
+                : null);
+          if (rs) receiverName = rs;
+          const dom = padronData.datosGenerales?.domicilioFiscal;
+          if (dom) {
+            const partes = [dom.direccion, dom.localidad, dom.descripcionProvincia].filter(Boolean);
+            if (partes.length) receiverAddress = partes.join(', ');
+          }
+          console.log('Padron receptor:', receiverName, '|', receiverAddress);
+        }
+      } catch(padronErr) {
+        console.warn('No se pudo consultar padron AFIP:', padronErr.message);
+      }
+    }
+
     const pdfItems = Array.isArray(pedidoItems) && pedidoItems.length > 0
       ? pedidoItems.map((it, i) => ({
           code:        String(i + 1).padStart(3, '0'),
@@ -147,8 +171,8 @@ export default async function handler(req, res) {
       issuer_iva_condition:      'Responsable Inscripto',
       issuer_gross_income:       String(CUIT),
       issuer_activity_start_date:'01/01/2020',
-      receiver_name:             tipo === 'A' ? String(req.body.cliente || cuitCliente || '-') : 'CONSUMIDOR FINAL',
-      receiver_address:          '-',
+      receiver_name:             receiverName,
+      receiver_address:          receiverAddress,
       receiver_document_type:    docTipo,
       receiver_document_number:  docNro,
       receiver_iva_condition:    tipo === 'A' ? 'Responsable Inscripto' : (condIvaStr[condicionIva] || 'Consumidor Final'),
