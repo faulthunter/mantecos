@@ -18,6 +18,36 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'No autorizado' });
     }
 
+    // Supabase config
+    const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
+    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+
+    // ── CHEQUEO ANTI-DUPLICADO ───────────────────────────────
+    const pedidoId = req.body.pedidoId || '';
+    if (pedidoId) {
+      try {
+        const dupRes = await fetch(
+          `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
+          { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` } }
+        );
+        if (dupRes.ok) {
+          const existing = await dupRes.json();
+          if (Array.isArray(existing) && existing.length > 0) {
+            const f = existing[0];
+            console.log('Factura ya existe para pedido', pedidoId, '— devolviendo existente');
+            return res.status(200).json({
+              ok: true, CAE: f.cae, CAEFchVto: f.cae_vto || '',
+              nroComprobante: f.nro, tipo: f.tipo, total: f.total,
+              puntoVenta: f.punto_venta || 10, pdfUrl: f.pdf_url || '',
+              yaExistia: true,
+            });
+          }
+        }
+      } catch(dupErr) {
+        console.warn('Error chequeando duplicado:', dupErr.message);
+      }
+    }
+
     // Leer cert y key desde env (con saltos de línea reales)
     const CERT = (process.env.AFIP_CERT || '').replace(/\\n/g, '\n').trim();
     const KEY  = (process.env.AFIP_KEY  || '').replace(/\\n/g, '\n').trim();
@@ -199,59 +229,11 @@ export default async function handler(req, res) {
       template: { name: templateName, params: baseParams }
     };
 
-    console.log('PDF pdfData enviado:', JSON.stringify(pdfData, null, 2));
-    // Supabase config — necesario antes del upload del PDF
-    const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
-    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
-
-    let pdfResult;
-    try {
-      pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
-    } catch(pdfErr) {
-      // Capturar body completo del error de Axios
-      const axiosData = pdfErr.response?.data;
-      console.error('createPDF error body:', JSON.stringify(axiosData, null, 2));
-      throw new Error('createPDF 400: ' + JSON.stringify(axiosData));
-    }
-    console.log('PDF URL temporal AfipSDK:', pdfResult.file);
-
-    // Descargar PDF desde AfipSDK y subir a Supabase Storage para URL permanente
-    let pdfUrlFinal = pdfResult.file;
-    try {
-      const pdfResponse = await fetch(pdfResult.file);
-      if (pdfResponse.ok) {
-        const pdfBuffer = await pdfResponse.arrayBuffer();
-        const pdfBytes  = Buffer.from(pdfBuffer);
-        const fileName  = pdfData.file_name;
-        const uploadRes = await fetch(
-          `${SUPA_URL}/storage/v1/object/facturas/${fileName}`,
-          {
-            method: 'POST',
-            headers: {
-              'apikey':        SUPA_ANON,
-              'Authorization': `Bearer ${SUPA_ANON}`,
-              'Content-Type':  'application/pdf',
-              'x-upsert':      'true',
-            },
-            body: pdfBytes
-          }
-        );
-        if (uploadRes.ok) {
-          pdfUrlFinal = `${SUPA_URL}/storage/v1/object/public/facturas/${fileName}`;
-          console.log('PDF subido a Supabase Storage OK:', pdfUrlFinal);
-        } else {
-          const uploadErr = await uploadRes.text();
-          console.error('Error subiendo PDF a Supabase Storage status:', uploadRes.status, uploadErr);
-        }
-      }
-    } catch(uploadErr) {
-      console.error('Error descargando/subiendo PDF:', uploadErr.message);
-    }
-
-    // Guardar en Supabase tabla facturas (SUPA_URL y SUPA_ANON ya definidos arriba)
-
+    // ── 1. GUARDAR FACTURA EN SUPABASE (antes del PDF) ─────────
+    // Así si el PDF falla, la factura ya quedó registrada y no se emite de nuevo
+    let pdfUrlFinal = '';
     const facturaPayload = {
-      pedido_id:    String(req.body.pedidoId || ''),
+      pedido_id:    String(pedidoId),
       cliente:      String(req.body.cliente  || ''),
       tipo:         String(tipo),
       nro:          Number(result.voucherNumber),
@@ -260,12 +242,9 @@ export default async function handler(req, res) {
       cae_vto:      String(result.CAEFchVto),
       total:        Number(total),
       con_iva:      !!conIva,
-      pdf_url:      String(pdfUrlFinal || ''),
+      pdf_url:      '',
       fecha_emision: now.toISOString().split('T')[0],
     };
-    console.log('Guardando factura:', JSON.stringify(facturaPayload));
-    console.log('PDF baseParams:', JSON.stringify(baseParams, null, 2));
-
     try {
       const saveRes = await fetch(`${SUPA_URL}/rest/v1/facturas`, {
         method: 'POST',
@@ -285,7 +264,69 @@ export default async function handler(req, res) {
       }
     } catch(saveErr) {
       console.error('Error guardando factura en Supabase:', saveErr.message);
-      // No interrumpir — la factura ya fue emitida en AFIP
+    }
+
+    // ── 2. GENERAR PDF (opcional — si falla la factura ya está en AFIP y Supabase) ──
+    try {
+      const pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+      console.log('PDF URL temporal AfipSDK:', pdfResult.file);
+
+      try {
+        const pdfResponse = await fetch(pdfResult.file);
+        if (pdfResponse.ok) {
+          const pdfBuffer = await pdfResponse.arrayBuffer();
+          const pdfBytes  = Buffer.from(pdfBuffer);
+          const fileName  = pdfData.file_name;
+          const uploadRes = await fetch(
+            `${SUPA_URL}/storage/v1/object/facturas/${fileName}`,
+            {
+              method: 'POST',
+              headers: {
+                'apikey':        SUPA_ANON,
+                'Authorization': `Bearer ${SUPA_ANON}`,
+                'Content-Type':  'application/pdf',
+                'x-upsert':      'true',
+              },
+              body: pdfBytes
+            }
+          );
+          if (uploadRes.ok) {
+            pdfUrlFinal = `${SUPA_URL}/storage/v1/object/public/facturas/${fileName}`;
+            console.log('PDF subido a Supabase Storage OK:', pdfUrlFinal);
+          } else {
+            pdfUrlFinal = pdfResult.file;
+            console.error('Error subiendo PDF a Storage:', uploadRes.status, await uploadRes.text());
+          }
+        }
+      } catch(uploadErr) {
+        pdfUrlFinal = pdfResult.file;
+        console.error('Error upload PDF:', uploadErr.message);
+      }
+
+      // Actualizar pdf_url en Supabase
+      if (pdfUrlFinal && pedidoId) {
+        try {
+          await fetch(
+            `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'apikey':        SUPA_ANON,
+                'Authorization': `Bearer ${SUPA_ANON}`,
+                'Content-Type':  'application/json',
+                'Prefer':        'return=minimal'
+              },
+              body: JSON.stringify({ pdf_url: pdfUrlFinal })
+            }
+          );
+        } catch(patchErr) {
+          console.error('Error actualizando pdf_url:', patchErr.message);
+        }
+      }
+    } catch(pdfErr) {
+      const axiosData = pdfErr.response?.data;
+      console.error('Error generando PDF (factura ya guardada):', pdfErr.message, JSON.stringify(axiosData));
+      // No lanzar — devolver éxito igual con pdfUrl vacío
     }
 
     return res.status(200).json({
@@ -301,7 +342,6 @@ export default async function handler(req, res) {
 
   } catch (e) {
     console.error('Error facturar:', e.message, JSON.stringify(e.data || e.response?.data || {}, null, 2));
-    console.error('Error facturar full:', JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
     return res.status(500).json({ error: e.message, detail: e.data || null });
   }
 }
