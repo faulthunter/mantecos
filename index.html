@@ -801,6 +801,11 @@ canvas { width: 100% !important; }
           <button class="period-btn" onclick="setFactPeriodo('30d',this)">30 días</button>
           <button class="period-btn" onclick="setFactPeriodo('todos',this)">Todos</button>
         </div>
+        <div style="margin-top:10px">
+          <select id="fact-cliente-filtro" onchange="cargarPedidosFacturacion()" style="font-size:14px;padding:8px 10px">
+            <option value="">— Todos los clientes —</option>
+          </select>
+        </div>
       </div>
       <div id="fact-resumen" style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
         <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
@@ -3477,10 +3482,24 @@ async function cargarPedidosFacturacion() {
       }
     } catch(e) { console.warn('No se pudieron cargar facturas:', e.message); }
 
+    const clienteFiltro = document.getElementById('fact-cliente-filtro')?.value || '';
+
+    // Poblar selector con clientes del período
+    const selFact = document.getElementById('fact-cliente-filtro');
+    if (selFact) {
+      const clientesDisp = [...new Set(pedidos
+        .filter(p => p.fecha && (!desde || p.fecha >= desde) && (!hasta || p.fecha <= hasta))
+        .map(p => p.cliente).filter(Boolean))].sort();
+      const valActual = selFact.value;
+      selFact.innerHTML = '<option value="">— Todos los clientes —</option>'
+        + clientesDisp.map(c => `<option value="${c}" ${c === valActual ? 'selected' : ''}>${c}</option>`).join('');
+    }
+
     pedidosFacturacion = pedidos.filter(p => {
       if (!p.fecha) return false;
       if (desde && p.fecha < desde) return false;
       if (hasta  && p.fecha > hasta)  return false;
+      if (clienteFiltro && p.cliente !== clienteFiltro) return false;
       return true;
     }).sort((a, b) => b.fecha.localeCompare(a.fecha));
 
