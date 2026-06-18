@@ -827,6 +827,11 @@ canvas { width: 100% !important; }
           <button class="period-btn" onclick="setHistPeriodo('30d',this)">30 días</button>
           <button class="period-btn" onclick="setHistPeriodo('todos',this)">Todos</button>
         </div>
+        <div style="margin-top:10px">
+          <select id="hist-cliente" onchange="cargarHistorialFacturas()" style="font-size:14px;padding:8px 10px">
+            <option value="">— Todos los clientes —</option>
+          </select>
+        </div>
       </div>
       <!-- KPIs historial -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="hist-kpis" style="display:none">
@@ -3752,18 +3757,37 @@ function setHistPeriodo(p, btn) {
 }
 
 async function cargarHistorialFacturas() {
-  const desde = document.getElementById('hist-desde').value;
-  const hasta = document.getElementById('hist-hasta').value;
+  const desde    = document.getElementById('hist-desde').value;
+  const hasta    = document.getElementById('hist-hasta').value;
+  const clienteF = document.getElementById('hist-cliente')?.value || '';
   const container = document.getElementById('lista-historial-facturas');
   container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Cargando...</div>';
 
   try {
     let url = SUPA_URL + '/rest/v1/facturas?order=created_at.desc';
-    if (desde) url += '&fecha_emision=gte.' + desde;
-    if (hasta) url += '&fecha_emision=lte.' + hasta;
+    if (desde)    url += '&fecha_emision=gte.' + desde;
+    if (hasta)    url += '&fecha_emision=lte.' + hasta;
+    if (clienteF) url += '&cliente=eq.' + encodeURIComponent(clienteF);
 
     const res = await fetch(url, { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } });
     const facturas = await res.json();
+
+    // Poblar selector de clientes con los que tienen facturas (solo primera carga sin filtro)
+    const selCliente = document.getElementById('hist-cliente');
+    if (selCliente && !clienteF) {
+      // Traer todos para poblar el selector
+      const allRes = await fetch(
+        SUPA_URL + '/rest/v1/facturas?select=cliente&order=cliente.asc',
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+      );
+      if (allRes.ok) {
+        const allF = await allRes.json();
+        const clientesUnicos = [...new Set((allF || []).map(f => f.cliente).filter(Boolean))].sort();
+        const currentVal = selCliente.value;
+        selCliente.innerHTML = '<option value="">— Todos los clientes —</option>'
+          + clientesUnicos.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('');
+      }
+    }
 
     if (!Array.isArray(facturas) || facturas.length === 0) {
       document.getElementById('hist-kpis').style.display = 'none';
