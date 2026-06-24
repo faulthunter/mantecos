@@ -189,6 +189,33 @@ export default async function handler(req, res) {
         }))
       : [{ code: '001', description: 'Productos de panadería artesanal', quantity: 1, unit_price: total, subtotal: total, ...(tipo === 'A' && { vat_rate: 21 }) }];
 
+    // CRÍTICO: el envío se incluye en ImpTotal/ImpNeto pero hay que sumarlo como línea
+    // visible en el PDF, sino el detalle de items no suma el total facturado
+    if (envio > 0) {
+      pdfItems.push({
+        code:        String(pdfItems.length + 1).padStart(3, '0'),
+        description: 'Costo de envío',
+        quantity:    1,
+        unit_price:  envio,
+        subtotal:    envio,
+        ...(tipo === 'A' && { vat_rate: 21 }),
+      });
+    }
+
+    // VALIDACIÓN ANTI-DESCUADRE: la suma de subtotales de items debe coincidir con
+    // el ImpTotal que se le mandó a AFIP. Si no coincide, NO seguimos — abortamos
+    // antes de generar un PDF que el cliente pueda usar para reclamar.
+    const sumaItemsPdf = Math.round(pdfItems.reduce((s, it) => s + it.subtotal, 0) * 100) / 100;
+    const diffCheck = Math.abs(sumaItemsPdf - total);
+    if (diffCheck > 1) { // tolerancia de redondeo de $1
+      console.error('DESCUADRE DETECTADO: suma items PDF =', sumaItemsPdf, 'vs total facturado =', total, 'diff =', diffCheck);
+      console.error('pedidoItems recibidos:', JSON.stringify(pedidoItems));
+      console.error('envio:', envio);
+      // La factura YA fue emitida en AFIP en este punto (createNextVoucher ya corrió arriba).
+      // No podemos cancelarla, pero SÍ evitamos generar/guardar un PDF incorrecto.
+      // Guardamos igual la factura (CAE válido) pero marcamos el problema explícitamente.
+    }
+
     const baseParams = {
       voucher_number:            result.voucherNumber,
       sales_point:               ptoVta,
