@@ -118,9 +118,15 @@ export default async function handler(req, res) {
     const fileName = `factura-${tipo}-${nro}.pdf`;
     const pdfData = { file_name: fileName, template: { name: templateName, params: baseParams } };
 
-    console.log('Regenerando PDF (sin tocar AFIP):', JSON.stringify(pdfData));
+    console.log('Regenerando PDF (sin tocar AFIP):', JSON.stringify(pdfData, null, 2));
 
-    const pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+    let pdfResult;
+    try {
+      pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
+    } catch(pdfErr) {
+      console.error('createPDF error body:', JSON.stringify(pdfErr.response?.data, null, 2));
+      throw new Error('createPDF 400: ' + JSON.stringify(pdfErr.response?.data));
+    }
     console.log('PDF temporal regenerado:', pdfResult.file);
 
     let pdfUrlFinal = pdfResult.file;
