@@ -47,17 +47,18 @@ export default async function handler(req, res) {
     const docNro  = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
     const itemsSubtotal = (items || []).reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
-    const envio = 0;
-    let netoItems, ivaItems;
+    const envio = Number(req.body.envio) || 0;
+    const baseConEnvio = itemsSubtotal + envio;
+    let netoTotal, ivaTotal;
     if (conIva) {
-      netoItems = itemsSubtotal;
-      ivaItems  = Math.round(itemsSubtotal * 0.21 * 100) / 100;
+      netoTotal = baseConEnvio;
+      ivaTotal  = Math.round(baseConEnvio * 0.21 * 100) / 100;
     } else {
-      netoItems = Math.round(itemsSubtotal / 1.21 * 100) / 100;
-      ivaItems  = Math.round((itemsSubtotal - netoItems) * 100) / 100;
+      netoTotal = Math.round(baseConEnvio / 1.21 * 100) / 100;
+      ivaTotal  = Math.round((baseConEnvio - netoTotal) * 100) / 100;
     }
-    const neto   = Math.round(netoItems * 100) / 100;
-    const ivaAmt = Math.round(ivaItems * 100) / 100;
+    const neto   = Math.round(netoTotal * 100) / 100;
+    const ivaAmt = Math.round(ivaTotal * 100) / 100;
 
     const fmtDate = (str) => {
       const s = String(str).replace(/-/g, '');
@@ -81,6 +82,14 @@ export default async function handler(req, res) {
       subtotal:    Math.round((Number(it.precio) || 0) * (Number(it.cantidad) || 1) * 100) / 100,
       ...(tipo === 'A' && { vat_rate: 21 }),
     }));
+    if (envio > 0) {
+      pdfItems.push({
+        code: String(pdfItems.length + 1).padStart(3, '0'),
+        description: 'Costo de envío',
+        quantity: 1, unit_price: envio, subtotal: envio,
+        ...(tipo === 'A' && { vat_rate: 21 }),
+      });
+    }
 
     const baseParams = {
       voucher_number: Number(nro),
