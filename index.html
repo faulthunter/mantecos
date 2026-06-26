@@ -3500,18 +3500,22 @@ async function cargarPedidosFacturacion() {
         + clientesDisp.map(c => `<option value="${c}" ${c === valActual ? 'selected' : ''}>${c}</option>`).join('');
     }
 
+    // Usar fecha de CREACIÓN del pedido para el filtro de período, no la fecha de
+    // entrega — un pedido con entrega futura puede necesitar factura hoy (antes de cobrar)
+    const fechaCreacion = (p) => (p.created_at || '').split('T')[0];
+
     pedidosFacturacion = pedidos.filter(p => {
-      // Pedidos SIN fecha (ej: pendientes de entrega parcial) siempre aparecen,
-      // sin importar el filtro de período — pueden necesitar factura antes de cobrarse
-      if (!p.fecha) {
+      const fc = fechaCreacion(p);
+      if (!fc) {
+        // Sin fecha de creación tampoco — mostrar siempre por seguridad
         if (clienteFiltro && p.cliente !== clienteFiltro) return false;
         return true;
       }
-      if (desde && p.fecha < desde) return false;
-      if (hasta  && p.fecha > hasta)  return false;
+      if (desde && fc < desde) return false;
+      if (hasta  && fc > hasta)  return false;
       if (clienteFiltro && p.cliente !== clienteFiltro) return false;
       return true;
-    }).sort((a, b) => (b.fecha || '9999').localeCompare(a.fecha || '9999'));
+    }).sort((a, b) => fechaCreacion(b).localeCompare(fechaCreacion(a)));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
