@@ -3501,12 +3501,17 @@ async function cargarPedidosFacturacion() {
     }
 
     pedidosFacturacion = pedidos.filter(p => {
-      if (!p.fecha) return false;
+      // Pedidos SIN fecha (ej: pendientes de entrega parcial) siempre aparecen,
+      // sin importar el filtro de período — pueden necesitar factura antes de cobrarse
+      if (!p.fecha) {
+        if (clienteFiltro && p.cliente !== clienteFiltro) return false;
+        return true;
+      }
       if (desde && p.fecha < desde) return false;
       if (hasta  && p.fecha > hasta)  return false;
       if (clienteFiltro && p.cliente !== clienteFiltro) return false;
       return true;
-    }).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    }).sort((a, b) => (b.fecha || '9999').localeCompare(a.fecha || '9999'));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
