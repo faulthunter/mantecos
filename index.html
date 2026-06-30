@@ -108,6 +108,9 @@ textarea { resize: none; }
 .kanban-cols.tablero .lista-pedido-row { flex-wrap: wrap; row-gap: 6px; }
 .kanban-cols.tablero .lista-pedido-row > div:first-child { flex-basis: 100%; }
 .kanban-cols.tablero .lista-total { margin-left: auto; }
+/* Tablero en modo lista: columnas más anchas y nombre completo */
+.kanban-cols.tablero.lista-mode .kanban-col { flex: 0 0 340px; width: 340px; max-width: 340px; }
+.kanban-cols.tablero.lista-mode .lista-cliente { white-space: normal; overflow: visible; text-overflow: clip; }
 .pedido-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
 .pedido-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .pedido-card h3 { font-size: 18px; font-weight: 600; }
@@ -2441,6 +2444,7 @@ function filtrarKanban() {
 function renderKanban(pedidos) {
   const cont = document.querySelector('.kanban-cols');
   if (cont) cont.classList.toggle('tablero', layoutKanban === 'tablero');
+  if (cont) cont.classList.toggle('lista-mode', contenidoKanban === 'lista');
   ESTADOS.forEach(estado => {
     const col   = document.getElementById(COL_IDS[estado]);
     const count = document.getElementById(COUNT_IDS[estado]);
