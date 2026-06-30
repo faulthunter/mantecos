@@ -601,7 +601,8 @@ canvas { width: 100% !important; }
   <div class="kanban-header" style="margin-top:16px">
     <h2>Estado de pedidos</h2>
     <div style="display:flex;gap:8px">
-      <button class="btn-refresh" id="btn-vista-toggle" onclick="toggleVistaKanban()">☰ Lista</button>
+      <button class="btn-refresh" id="btn-vista-toggle" onclick="toggleContenidoKanban()">☰ Lista</button>
+      <button class="btn-refresh" id="btn-layout-toggle" onclick="toggleLayoutKanban()">▦ Tablero</button>
       <button class="btn-refresh" onclick="generarPDFProduccion()">📦 PDF Producción</button>
       <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
     </div>
@@ -2268,13 +2269,20 @@ function generarPDFProduccion() {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-let vistaKanban = 'tarjetas'; // 'tarjetas' | 'lista' | 'tablero'
+let contenidoKanban = 'tarjetas'; // 'tarjetas' | 'lista'
+let layoutKanban    = 'normal';   // 'normal'   | 'tablero'
 
-function toggleVistaKanban() {
-  const ciclo  = { 'tarjetas': 'lista', 'lista': 'tablero', 'tablero': 'tarjetas' };
-  const labels = { 'tarjetas': '☰ Lista', 'lista': '▦ Tablero', 'tablero': '⊞ Tarjetas' };
-  vistaKanban = ciclo[vistaKanban] || 'tarjetas';
-  document.getElementById('btn-vista-toggle').textContent = labels[vistaKanban];
+function toggleContenidoKanban() {
+  contenidoKanban = contenidoKanban === 'tarjetas' ? 'lista' : 'tarjetas';
+  document.getElementById('btn-vista-toggle').textContent =
+    contenidoKanban === 'tarjetas' ? '☰ Lista' : '⊞ Tarjetas';
+  filtrarKanban();
+}
+
+function toggleLayoutKanban() {
+  layoutKanban = layoutKanban === 'normal' ? 'tablero' : 'normal';
+  document.getElementById('btn-layout-toggle').textContent =
+    layoutKanban === 'normal' ? '▦ Tablero' : '▤ Normal';
   filtrarKanban();
 }
 
@@ -2428,7 +2436,7 @@ function filtrarKanban() {
 
 function renderKanban(pedidos) {
   const cont = document.querySelector('.kanban-cols');
-  if (cont) cont.classList.toggle('tablero', vistaKanban === 'tablero');
+  if (cont) cont.classList.toggle('tablero', layoutKanban === 'tablero');
   ESTADOS.forEach(estado => {
     const col   = document.getElementById(COL_IDS[estado]);
     const count = document.getElementById(COUNT_IDS[estado]);
@@ -2440,7 +2448,7 @@ function renderKanban(pedidos) {
       return;
     }
 
-    if (vistaKanban === 'lista') {
+    if (contenidoKanban === 'lista') {
       col.innerHTML = `<div style="background:var(--surface)">${filtered.map(p => pedidoListaHTML(p)).join('')}</div>`;
     } else {
       col.innerHTML = filtered.map(p => pedidoCardHTML(p)).join('');
