@@ -104,6 +104,10 @@ textarea { resize: none; }
 .kanban-cols.tablero { flex-direction: row; overflow-x: auto; align-items: flex-start; gap: 12px; padding-bottom: 10px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; position: relative; left: 50%; transform: translateX(-50%); width: 94vw; max-width: 94vw; }
 .kanban-cols.tablero .kanban-col { flex: 0 0 280px; width: 280px; max-width: 280px; scroll-snap-align: start; display: flex; flex-direction: column; }
 .kanban-cols.tablero .kanban-cards { flex: 1; max-height: 65vh; overflow-y: auto; }
+/* Vista lista dentro de tablero: reacomodar en 2 renglones (col angosta) */
+.kanban-cols.tablero .lista-pedido-row { flex-wrap: wrap; row-gap: 6px; }
+.kanban-cols.tablero .lista-pedido-row > div:first-child { flex-basis: 100%; }
+.kanban-cols.tablero .lista-total { margin-left: auto; }
 .pedido-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
 .pedido-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .pedido-card h3 { font-size: 18px; font-weight: 600; }
