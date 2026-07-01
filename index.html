@@ -2422,6 +2422,16 @@ function setUnidadPorAmasado(key, valor) {
   localStorage.setItem('manteco_amasados', JSON.stringify(cfg));
   renderAmasados();
 }
+function getStockActual() {
+  try { return JSON.parse(localStorage.getItem('manteco_stock') || '{}'); }
+  catch { return {}; }
+}
+function setStockActual(key, valor) {
+  const cfg = getStockActual();
+  cfg[key] = Number(valor) || 0;
+  localStorage.setItem('manteco_stock', JSON.stringify(cfg));
+  renderAmasados();
+}
 function setFiltroAmasados(filtro, btn) {
   filtroAmasados = filtro;
   document.querySelectorAll('#amas-filtro-todos, #amas-filtro-esta, #amas-filtro-proxima')
@@ -2434,44 +2444,58 @@ function renderAmasados() {
   const cont = document.getElementById('amasados-lista');
   if (!cont) return;
   const totales = calcularTotalesProduccion(todosPedidos || [], filtroAmasados);
-  const cfg = getUnidadesPorAmasado();
+  const cfgUpa   = getUnidadesPorAmasado();
+  const cfgStock = getStockActual();
+
+  let totalAmasados = 0;
 
   cont.innerHTML = CATEGORIAS_AMASADO.map(cat => {
-    const total = totales[cat.key] || 0;
-    const upa   = Number(cfg[cat.key]) || 0;
-    const amasados = (upa > 0 && total > 0) ? Math.ceil(total / upa) : 0;
-    const sobran   = (amasados > 0) ? (amasados * upa - total) : 0;
-    const infoAmasados = upa > 0
-      ? `<div style="font-size:26px;font-weight:800;color:var(--accent);line-height:1">${amasados}</div>
-         <div style="font-size:10px;color:var(--muted)">amasado${amasados === 1 ? '' : 's'}${sobran > 0 ? ` · sobran ${sobran}` : ''}</div>`
-      : `<div style="font-size:12px;color:var(--muted);font-style:italic">definí unid.</div>`;
+    const pedidas  = totales[cat.key] || 0;
+    const upa      = Number(cfgUpa[cat.key]) || 0;
+    const stock    = Number(cfgStock[cat.key]) || 0;
+    const aProducir = Math.max(0, pedidas - stock);
+    const amasados  = (upa > 0 && aProducir > 0) ? Math.ceil(aProducir / upa) : 0;
+    const sobran    = (amasados > 0) ? (amasados * upa - aProducir) : 0;
+    totalAmasados += amasados;
+
+    let resultado;
+    if (upa <= 0) {
+      resultado = `<span style="color:var(--muted);font-style:italic">definí unidades por amasado</span>`;
+    } else if (aProducir <= 0) {
+      resultado = `<span style="color:#16a34a;font-weight:700">✓ Cubierto con el stock</span>`;
+    } else {
+      resultado = `<span style="color:var(--text)">A producir <b>${aProducir}</b> u.</span>
+        <span style="color:var(--muted)"> → </span>
+        <span style="color:var(--accent);font-weight:800;font-size:18px">${amasados}</span>
+        <span style="color:var(--muted)"> amasado${amasados === 1 ? '' : 's'}${sobran > 0 ? ` · sobran ${sobran}` : ''}</span>`;
+    }
 
     return `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border)">
-      <div style="flex:1;min-width:0">
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;background:var(--surface)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
         <div style="font-weight:700;color:var(--text);font-size:15px">${cat.label}</div>
-        <div style="font-size:12px;color:var(--muted)">${total} u. pedidas</div>
+        <div style="font-size:13px;color:var(--muted)"><b style="color:var(--text)">${pedidas}</b> u. pedidas</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        <input type="number" min="0" inputmode="numeric" value="${upa || ''}" placeholder="0"
-          onchange="setUnidadPorAmasado('${cat.key}', this.value)"
-          style="width:70px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px" />
-        <div style="font-size:10px;color:var(--muted)">u. x amasado</div>
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <label style="flex:1;font-size:11px;color:var(--muted)">Unid. por amasado
+          <input type="number" min="0" inputmode="numeric" value="${upa || ''}" placeholder="0"
+            onchange="setUnidadPorAmasado('${cat.key}', this.value)"
+            style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px;box-sizing:border-box" />
+        </label>
+        <label style="flex:1;font-size:11px;color:var(--muted)">Stock actual
+          <input type="number" min="0" inputmode="numeric" value="${stock || ''}" placeholder="0"
+            onchange="setStockActual('${cat.key}', this.value)"
+            style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px;box-sizing:border-box" />
+        </label>
       </div>
-      <div style="width:78px;text-align:center;flex-shrink:0">${infoAmasados}</div>
+      <div style="font-size:13px;text-align:center;padding-top:2px;border-top:1px dashed var(--border);padding-top:8px">${resultado}</div>
     </div>`;
   }).join('');
 
-  // Total de amasados
-  const totalAmasados = CATEGORIAS_AMASADO.reduce((acc, cat) => {
-    const total = totales[cat.key] || 0;
-    const upa   = Number(cfg[cat.key]) || 0;
-    return acc + ((upa > 0 && total > 0) ? Math.ceil(total / upa) : 0);
-  }, 0);
   cont.innerHTML += `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 4px 4px;margin-top:4px">
-      <div style="font-weight:700;color:var(--text);font-size:15px">Total amasados</div>
-      <div style="font-size:26px;font-weight:800;color:var(--accent)">${totalAmasados}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;margin-top:4px;background:var(--accent);border-radius:var(--radius-sm)">
+      <div style="font-weight:700;color:white;font-size:15px">Total amasados</div>
+      <div style="font-size:26px;font-weight:800;color:white">${totalAmasados}</div>
     </div>`;
 }
 
