@@ -516,6 +516,7 @@ canvas { width: 100% !important; }
 <nav class="nav" id="nav-produccion" style="display:none">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
+  <button class="nav-btn"        id="nav-amasados" onclick="showPage('amasados'); renderAmasados()">🧮 Amasados</button>
 </nav>
 
 <nav class="nav" id="nav-costeo-tabs" style="display:none">
@@ -639,6 +640,28 @@ canvas { width: 100% !important; }
     <div class="kanban-col col-entregado">
       <div class="kanban-col-header">Entregado por cobrar <span class="count" id="count-entregado">0</span><span class="chevron">▾</span></div>
       <div class="kanban-cards" id="col-entregado"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PÁGINA CALCULADORA DE AMASADOS ──────────────────── -->
+<div class="page" id="page-amasados">
+  <div style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">🧮 Calculadora de amasados</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Amasados a producir según lo pedido</div>
+      </div>
+      <button class="btn-refresh" onclick="renderAmasados()">↻ Actualizar</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="period-btn"        id="amas-filtro-todos"   onclick="setFiltroAmasados('todos',this)">Todos</button>
+      <button class="period-btn active" id="amas-filtro-esta"    onclick="setFiltroAmasados('esta',this)">Esta semana</button>
+      <button class="period-btn"        id="amas-filtro-proxima" onclick="setFiltroAmasados('proxima',this)">Próxima semana</button>
+    </div>
+    <div id="amasados-lista"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5">
+      💡 Las unidades por amasado se guardan en este dispositivo. Editá el valor de cada producto y el cálculo se actualiza solo.
     </div>
   </div>
 </div>
@@ -2324,50 +2347,132 @@ function toggleCol(header) {
   header.closest('.kanban-col').classList.toggle('collapsed');
 }
 
-function actualizarBadges(pedidos) {
-  // Aplicar el mismo filtro de semana activo
+// Calcula los totales de unidades pedidas por categoría (Nuevo + Producción)
+function calcularTotalesProduccion(pedidos, filtro) {
   let filtrados = pedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
+  if (filtro === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
+  else if (filtro === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
-  if (filtroSemana === 'esta') {
-    filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
-  } else if (filtroSemana === 'proxima') {
-    filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
-  }
-
-  const nuevos = filtrados.filter(p => p.estado === 'Nuevo').length;
-  let medialunas = 0, croissants = 0, panchoco = 0;
-  let trenzas = 0, hojaldres = 0, palmeritas = 0, danesas = 0;
-
+  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0 };
   filtrados.forEach(p => {
     (p.items || []).forEach(it => {
       const n = String(it.nombre).toLowerCase().trim();
       const cant = Number(it.cantidad) || 0;
-      if (n === 'medialuna')                        medialunas += cant;
-      if (n === 'caja medialunas x30')              medialunas += cant * 30;
-      if (n === 'medialuna docena minorista x12')   medialunas += cant * 12;
-      if (n === 'croissant')                        croissants += cant;
-      if (n === 'caja croissant x20')               croissants += cant * 20;
-      if (n === 'pan de choco')                     panchoco += cant;
-      if (n === 'caja pan de choco x20')            panchoco += cant * 20;
-      if (n === 'trenza')                           trenzas += cant;
-      if (n === 'caja trenzas x20')                 trenzas += cant * 20;
-      if (n === 'hojaldre')                         hojaldres += cant;
-      if (n === 'caja hojaldre x20')                hojaldres += cant * 20;
-      if (n === 'palmerita')                        palmeritas += cant;
-      if (n === 'caja palmeritas x20')              palmeritas += cant * 20;
-      if (n === 'danesa')                           danesas += cant;
-      if (n === 'caja danesas x20')                 danesas += cant * 20;
+      if (n === 'medialuna')                        t.medialunas += cant;
+      if (n === 'caja medialunas x30')              t.medialunas += cant * 30;
+      if (n === 'medialuna docena minorista x12')   t.medialunas += cant * 12;
+      if (n === 'croissant')                        t.croissants += cant;
+      if (n === 'caja croissant x20')               t.croissants += cant * 20;
+      if (n === 'pan de choco')                     t.panchoco += cant;
+      if (n === 'caja pan de choco x20')            t.panchoco += cant * 20;
+      if (n === 'trenza')                           t.trenzas += cant;
+      if (n === 'caja trenzas x20')                 t.trenzas += cant * 20;
+      if (n === 'hojaldre')                         t.hojaldres += cant;
+      if (n === 'caja hojaldre x20')                t.hojaldres += cant * 20;
+      if (n === 'palmerita')                        t.palmeritas += cant;
+      if (n === 'caja palmeritas x20')              t.palmeritas += cant * 20;
+      if (n === 'danesa')                           t.danesas += cant;
+      if (n === 'caja danesas x20')                 t.danesas += cant * 20;
     });
   });
+  return t;
+}
+
+function actualizarBadges(pedidos) {
+  // Aplicar el mismo filtro de semana activo para contar "Nuevos"
+  let filtrados = pedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
+  if (filtroSemana === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
+  else if (filtroSemana === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
+
+  const nuevos = filtrados.filter(p => p.estado === 'Nuevo').length;
+  const t = calcularTotalesProduccion(pedidos, filtroSemana);
 
   document.getElementById('badge-nuevos').textContent     = nuevos;
-  document.getElementById('badge-medialunas').textContent = medialunas;
-  document.getElementById('badge-croissants').textContent = croissants;
-  document.getElementById('badge-panchoco').textContent   = panchoco;
-  document.getElementById('badge-trenzas').textContent    = trenzas;
-  document.getElementById('badge-hojaldres').textContent  = hojaldres;
-  document.getElementById('badge-palmeritas').textContent = palmeritas;
-  document.getElementById('badge-danesas').textContent    = danesas;
+  document.getElementById('badge-medialunas').textContent = t.medialunas;
+  document.getElementById('badge-croissants').textContent = t.croissants;
+  document.getElementById('badge-panchoco').textContent   = t.panchoco;
+  document.getElementById('badge-trenzas').textContent    = t.trenzas;
+  document.getElementById('badge-hojaldres').textContent  = t.hojaldres;
+  document.getElementById('badge-palmeritas').textContent = t.palmeritas;
+  document.getElementById('badge-danesas').textContent    = t.danesas;
+
+  // Si la calculadora de amasados está visible, refrescarla
+  if (document.getElementById('page-amasados')?.classList.contains('active')) renderAmasados();
+}
+
+// ── Calculadora de amasados ──────────────────────────────
+const CATEGORIAS_AMASADO = [
+  { key: 'medialunas', label: 'Medialunas' },
+  { key: 'croissants', label: 'Croissants' },
+  { key: 'panchoco',   label: 'Pan de choco' },
+  { key: 'trenzas',    label: 'Trenzas' },
+  { key: 'hojaldres',  label: 'Hojaldres' },
+  { key: 'palmeritas', label: 'Palmeritas' },
+  { key: 'danesas',    label: 'Danesas' },
+];
+let filtroAmasados = 'esta'; // 'todos' | 'esta' | 'proxima'
+
+function getUnidadesPorAmasado() {
+  try { return JSON.parse(localStorage.getItem('manteco_amasados') || '{}'); }
+  catch { return {}; }
+}
+function setUnidadPorAmasado(key, valor) {
+  const cfg = getUnidadesPorAmasado();
+  cfg[key] = Number(valor) || 0;
+  localStorage.setItem('manteco_amasados', JSON.stringify(cfg));
+  renderAmasados();
+}
+function setFiltroAmasados(filtro, btn) {
+  filtroAmasados = filtro;
+  document.querySelectorAll('#amas-filtro-todos, #amas-filtro-esta, #amas-filtro-proxima')
+    .forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderAmasados();
+}
+
+function renderAmasados() {
+  const cont = document.getElementById('amasados-lista');
+  if (!cont) return;
+  const totales = calcularTotalesProduccion(todosPedidos || [], filtroAmasados);
+  const cfg = getUnidadesPorAmasado();
+
+  cont.innerHTML = CATEGORIAS_AMASADO.map(cat => {
+    const total = totales[cat.key] || 0;
+    const upa   = Number(cfg[cat.key]) || 0;
+    const amasados = (upa > 0 && total > 0) ? Math.ceil(total / upa) : 0;
+    const sobran   = (amasados > 0) ? (amasados * upa - total) : 0;
+    const infoAmasados = upa > 0
+      ? `<div style="font-size:26px;font-weight:800;color:var(--accent);line-height:1">${amasados}</div>
+         <div style="font-size:10px;color:var(--muted)">amasado${amasados === 1 ? '' : 's'}${sobran > 0 ? ` · sobran ${sobran}` : ''}</div>`
+      : `<div style="font-size:12px;color:var(--muted);font-style:italic">definí unid.</div>`;
+
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:var(--text);font-size:15px">${cat.label}</div>
+        <div style="font-size:12px;color:var(--muted)">${total} u. pedidas</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <input type="number" min="0" inputmode="numeric" value="${upa || ''}" placeholder="0"
+          onchange="setUnidadPorAmasado('${cat.key}', this.value)"
+          style="width:70px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px" />
+        <div style="font-size:10px;color:var(--muted)">u. x amasado</div>
+      </div>
+      <div style="width:78px;text-align:center;flex-shrink:0">${infoAmasados}</div>
+    </div>`;
+  }).join('');
+
+  // Total de amasados
+  const totalAmasados = CATEGORIAS_AMASADO.reduce((acc, cat) => {
+    const total = totales[cat.key] || 0;
+    const upa   = Number(cfg[cat.key]) || 0;
+    return acc + ((upa > 0 && total > 0) ? Math.ceil(total / upa) : 0);
+  }, 0);
+  cont.innerHTML += `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 4px 4px;margin-top:4px">
+      <div style="font-weight:700;color:var(--text);font-size:15px">Total amasados</div>
+      <div style="font-size:26px;font-weight:800;color:var(--accent)">${totalAmasados}</div>
+    </div>`;
 }
 
 async function loadKanban() {
