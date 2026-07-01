@@ -2447,8 +2447,6 @@ function renderAmasados() {
   const cfgUpa   = getUnidadesPorAmasado();
   const cfgStock = getStockActual();
 
-  let totalAmasados = 0;
-
   cont.innerHTML = CATEGORIAS_AMASADO.map(cat => {
     const pedidas  = totales[cat.key] || 0;
     const upa      = Number(cfgUpa[cat.key]) || 0;
@@ -2456,7 +2454,6 @@ function renderAmasados() {
     const aProducir = Math.max(0, pedidas - stock);
     const amasados  = (upa > 0 && aProducir > 0) ? Math.ceil(aProducir / upa) : 0;
     const sobran    = (amasados > 0) ? (amasados * upa - aProducir) : 0;
-    totalAmasados += amasados;
 
     let resultado;
     if (upa <= 0) {
@@ -2491,12 +2488,6 @@ function renderAmasados() {
       <div style="font-size:13px;text-align:center;padding-top:2px;border-top:1px dashed var(--border);padding-top:8px">${resultado}</div>
     </div>`;
   }).join('');
-
-  cont.innerHTML += `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;margin-top:4px;background:var(--accent);border-radius:var(--radius-sm)">
-      <div style="font-weight:700;color:white;font-size:15px">Total amasados</div>
-      <div style="font-size:26px;font-weight:800;color:white">${totalAmasados}</div>
-    </div>`;
 }
 
 async function loadKanban() {
