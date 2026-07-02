@@ -4785,35 +4785,21 @@ function renderGanancias() {
     return fecha >= desdeDate && fecha <= hastaDate;
   });
 
-  // Mapa de cajas/docenas → producto unitario base (minúsculas) + multiplicador
-  const DESARMAR_COSTEO = {
-    'caja medialunas x30':            { base: 'medialuna',    mult: 30 },
-    'medialuna docena minorista x12': { base: 'medialuna',    mult: 12 },
-    'caja croissant x20':             { base: 'croissant',    mult: 20 },
-    'caja pan de choco x20':          { base: 'pan de choco', mult: 20 },
-    'caja trenzas x20':               { base: 'trenza',       mult: 20 },
-    'caja hojaldre x20':              { base: 'hojaldre',     mult: 20 },
-    'caja palmeritas x20':            { base: 'palmerita',    mult: 20 },
-    'caja danesas x20':               { base: 'danesa',       mult: 20 },
-  };
-
-  // Acumular por producto base (minúsculas): unidades desarmadas (para costo) e ingresos reales cobrados
-  const ventasUnidades = {}; // unidades unitarias (cajas desarmadas)
+  // Acumular por producto (nombre en minúsculas): unidades vendidas e ingresos reales cobrados.
+  // Match uno-a-uno: cada producto (unidad o caja) tiene su propia receta, no se desarma nada.
+  const ventasUnidades = {}; // cantidad vendida tal cual (cajas cuentan como cajas)
   const ventasIngresos = {}; // $ realmente cobrados (precio del pedido × cantidad)
   pedidosFiltrados.forEach(p => {
     (p.items || []).forEach(item => {
-      const nombreLower = String(item.nombre).toLowerCase().trim();
+      const key    = String(item.nombre).toLowerCase().trim();
       const cant   = Number(item.cantidad) || 0;
       const precio = Number(item.precio)   || 0;
-      const map  = DESARMAR_COSTEO[nombreLower];
-      const base = map ? map.base : nombreLower;
-      const mult = map ? map.mult : 1;
-      ventasUnidades[base] = (ventasUnidades[base] || 0) + cant * mult;
-      ventasIngresos[base] = (ventasIngresos[base] || 0) + precio * cant;
+      ventasUnidades[key] = (ventasUnidades[key] || 0) + cant;
+      ventasIngresos[key] = (ventasIngresos[key] || 0) + precio * cant;
     });
   });
 
-  // Calcular ganancia solo para productos con receta (match case-insensitive)
+  // Calcular ganancia solo para productos con receta (match case-insensitive por nombre)
   const resultados = recetasCache
     .filter(rec => rec.producto)
     .map(rec => {
@@ -4823,7 +4809,7 @@ function renderGanancias() {
       const ingresos         = ventasIngresos[key] || 0;
       const costoTotal       = costoUnit * unidadesVendidas;
       const gananciaTotal    = ingresos - costoTotal;
-      const precioVenta      = unidadesVendidas > 0 ? ingresos / unidadesVendidas : 0; // precio real promedio por unidad
+      const precioVenta      = unidadesVendidas > 0 ? ingresos / unidadesVendidas : 0; // precio real promedio cobrado
       const gananciaUnit     = unidadesVendidas > 0 ? gananciaTotal / unidadesVendidas : 0;
       const margen           = ingresos > 0 ? (gananciaTotal / ingresos * 100) : 0;
       return { rec, costoUnit, precioVenta, unidadesVendidas, ingresos, gananciaUnit, gananciaTotal, margen };
