@@ -307,6 +307,11 @@ canvas { width: 100% !important; }
   font-size: clamp(3.6rem, 19vw, 20rem); line-height: 1;
   letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
 }
+#kc-lema {
+  color: #a2836d; font-weight: 600;
+  font-size: clamp(0.7rem, 2.3vw, 1.35rem);
+  letter-spacing: 0.38em; text-transform: uppercase; padding-left: 0.38em;
+}
 #kc-close {
   position: fixed; top: 20px; right: 24px; width: 46px; height: 46px;
   border-radius: 50%; background: rgba(0,0,0,0.04);
@@ -4998,6 +5003,7 @@ checkAuth();
   <button id="kc-close" onclick="event.stopPropagation();cerrarRelojCocina()">✕</button>
   <div id="kc-fecha"></div>
   <div id="kc-hora"></div>
+  <div id="kc-lema">Every second counts</div>
   <div id="kc-hint">Tocá para salir</div>
 </div>
 </body>
