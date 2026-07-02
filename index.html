@@ -4785,34 +4785,55 @@ function renderGanancias() {
     return fecha >= desdeDate && fecha <= hastaDate;
   });
 
-  // Sumar unidades vendidas por producto
-  const ventasPorProducto = {};
+  // Mapa de cajas/docenas → producto unitario base (minúsculas) + multiplicador
+  const DESARMAR_COSTEO = {
+    'caja medialunas x30':            { base: 'medialuna',    mult: 30 },
+    'medialuna docena minorista x12': { base: 'medialuna',    mult: 12 },
+    'caja croissant x20':             { base: 'croissant',    mult: 20 },
+    'caja pan de choco x20':          { base: 'pan de choco', mult: 20 },
+    'caja trenzas x20':               { base: 'trenza',       mult: 20 },
+    'caja hojaldre x20':              { base: 'hojaldre',     mult: 20 },
+    'caja palmeritas x20':            { base: 'palmerita',    mult: 20 },
+    'caja danesas x20':               { base: 'danesa',       mult: 20 },
+  };
+
+  // Acumular por producto base (minúsculas): unidades desarmadas (para costo) e ingresos reales cobrados
+  const ventasUnidades = {}; // unidades unitarias (cajas desarmadas)
+  const ventasIngresos = {}; // $ realmente cobrados (precio del pedido × cantidad)
   pedidosFiltrados.forEach(p => {
     (p.items || []).forEach(item => {
-      if (!ventasPorProducto[item.nombre]) ventasPorProducto[item.nombre] = 0;
-      ventasPorProducto[item.nombre] += item.cantidad;
+      const nombreLower = String(item.nombre).toLowerCase().trim();
+      const cant   = Number(item.cantidad) || 0;
+      const precio = Number(item.precio)   || 0;
+      const map  = DESARMAR_COSTEO[nombreLower];
+      const base = map ? map.base : nombreLower;
+      const mult = map ? map.mult : 1;
+      ventasUnidades[base] = (ventasUnidades[base] || 0) + cant * mult;
+      ventasIngresos[base] = (ventasIngresos[base] || 0) + precio * cant;
     });
   });
 
-  // Calcular ganancia solo para productos con receta
+  // Calcular ganancia solo para productos con receta (match case-insensitive)
   const resultados = recetasCache
     .filter(rec => rec.producto)
     .map(rec => {
-      const costoUnit = calcularCostoReceta(rec) / rec.rendimiento;
-      const prodData = productosCache.find(p => p.nombre === rec.producto);
-      const precioVenta = prodData ? prodData.precio : 0;
-      const unidadesVendidas = ventasPorProducto[rec.producto] || 0;
-      const gananciaUnit = precioVenta - costoUnit;
-      const gananciaTotal = gananciaUnit * unidadesVendidas;
-      const margen = precioVenta > 0 ? (gananciaUnit / precioVenta * 100) : 0;
-      return { rec, costoUnit, precioVenta, unidadesVendidas, gananciaUnit, gananciaTotal, margen };
+      const key = String(rec.producto).toLowerCase().trim();
+      const costoUnit        = calcularCostoReceta(rec) / rec.rendimiento;
+      const unidadesVendidas = ventasUnidades[key] || 0;
+      const ingresos         = ventasIngresos[key] || 0;
+      const costoTotal       = costoUnit * unidadesVendidas;
+      const gananciaTotal    = ingresos - costoTotal;
+      const precioVenta      = unidadesVendidas > 0 ? ingresos / unidadesVendidas : 0; // precio real promedio por unidad
+      const gananciaUnit     = unidadesVendidas > 0 ? gananciaTotal / unidadesVendidas : 0;
+      const margen           = ingresos > 0 ? (gananciaTotal / ingresos * 100) : 0;
+      return { rec, costoUnit, precioVenta, unidadesVendidas, ingresos, gananciaUnit, gananciaTotal, margen };
     })
     .sort((a, b) => b.gananciaTotal - a.gananciaTotal);
 
   // KPIs resumen
   const totalGanancia = resultados.reduce((s, r) => s + r.gananciaTotal, 0);
   const totalUnidades = resultados.reduce((s, r) => s + r.unidadesVendidas, 0);
-  const totalVentas   = resultados.reduce((s, r) => s + r.precioVenta * r.unidadesVendidas, 0);
+  const totalVentas   = resultados.reduce((s, r) => s + r.ingresos, 0);
 
   document.getElementById('gan-kpis').innerHTML = `
     <div class="card" style="text-align:center;padding:14px">
@@ -4820,7 +4841,7 @@ function renderGanancias() {
       <div style="font-size:20px;font-weight:700;color:var(--success)">$${Math.round(totalGanancia).toLocaleString('es-AR')}</div>
     </div>
     <div class="card" style="text-align:center;padding:14px">
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Ventas totales</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Ventas (costeadas)</div>
       <div style="font-size:20px;font-weight:700">$${Math.round(totalVentas).toLocaleString('es-AR')}</div>
     </div>
     <div class="card" style="text-align:center;padding:14px">
@@ -4859,7 +4880,7 @@ function renderGanancias() {
         </div>
         <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Margen</div>
-          <div style="font-size:16px;font-weight:700;color:${margenColor}">${r.precioVenta > 0 ? r.margen.toFixed(0) + '%' : '—'}</div>
+          <div style="font-size:16px;font-weight:700;color:${margenColor}">${r.ingresos > 0 ? r.margen.toFixed(0) + '%' : '—'}</div>
         </div>
         <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
           <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Ganancia total</div>
@@ -4867,7 +4888,7 @@ function renderGanancias() {
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted)">
-        Ventas: <strong>$${Math.round(r.precioVenta * r.unidadesVendidas).toLocaleString('es-AR')}</strong>
+        Ventas: <strong>$${Math.round(r.ingresos).toLocaleString('es-AR')}</strong>
         · Costo: <strong>$${Math.round(r.costoUnit * r.unidadesVendidas).toLocaleString('es-AR')}</strong>
       </div>
     </div>`;
