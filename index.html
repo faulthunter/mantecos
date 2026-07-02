@@ -1230,8 +1230,8 @@ function abrirModulo(modulo) {
     // Setear período por defecto (este mes) y cargar
     const hoy = new Date();
     const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    document.getElementById('fact-desde').value = primero.toISOString().split('T')[0];
-    document.getElementById('fact-hasta').value = hoy.toISOString().split('T')[0];
+    document.getElementById('fact-desde').value = fechaARG(primero);
+    document.getElementById('fact-hasta').value = fechaARG(hoy);
     cargarPedidosFacturacion();
   }
 }
@@ -3662,6 +3662,16 @@ function renderStats() {
 // ── FACTURACIÓN ───────────────────────────────────────────────
 let pedidosFacturacion = [];
 
+// Devuelve YYYY-MM-DD en horario de Argentina (desde un Date, un timestamp ISO, o ahora)
+function fechaARG(input) {
+  const d = input ? new Date(input) : new Date();
+  if (isNaN(d)) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(d);
+}
+
 function setFactPeriodo(p, btn) {
   document.querySelectorAll('#page-facturacion .period-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -3671,9 +3681,8 @@ function setFactPeriodo(p, btn) {
   if (p === '7d')   desde.setDate(hoy.getDate() - 6);
   if (p === '30d')  desde.setDate(hoy.getDate() - 29);
   if (p === 'mes')  desde.setDate(1);
-  if (p === 'todos') desde = new Date('2020-01-01');
-  document.getElementById('fact-desde').value = desde.toISOString().split('T')[0];
-  document.getElementById('fact-hasta').value = hoy.toISOString().split('T')[0];
+  document.getElementById('fact-desde').value = (p === 'todos') ? '2020-01-01' : fechaARG(desde);
+  document.getElementById('fact-hasta').value = fechaARG(hoy);
   cargarPedidosFacturacion();
 }
 
@@ -3718,8 +3727,10 @@ async function cargarPedidosFacturacion() {
     }
 
     // Usar fecha de CREACIÓN del pedido para el filtro de período, no la fecha de
-    // entrega — un pedido con entrega futura puede necesitar factura hoy (antes de cobrar)
-    const fechaCreacion = (p) => (p.created_at || '').split('T')[0];
+    // entrega — un pedido con entrega futura puede necesitar factura hoy (antes de cobrar).
+    // created_at viene en UTC → convertir a fecha de Argentina para que un pedido cargado
+    // de noche cuente como "hoy" y no como el día siguiente.
+    const fechaCreacion = (p) => p.created_at ? fechaARG(p.created_at) : '';
 
     pedidosFacturacion = pedidos.filter(p => {
       const fc = fechaCreacion(p);
