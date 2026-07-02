@@ -452,8 +452,10 @@ canvas { width: 100% !important; }
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="text-align:right;color:white;line-height:1.3">
         <div id="clock-dia" style="font-size:13px;opacity:0.75;text-transform:capitalize"></div>
-        <div id="clock-num" style="font-size:22px;font-weight:700;letter-spacing:-0.5px"></div>
-        <div id="clock-hora" style="font-size:13px;opacity:0.75"></div>
+        <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:10px">
+          <div id="clock-hora" style="font-size:20px;font-weight:600;opacity:0.9"></div>
+          <div id="clock-num" style="font-size:22px;font-weight:700;letter-spacing:-0.5px"></div>
+        </div>
       </div>
       <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
     </div>
@@ -1218,7 +1220,7 @@ async function refreshConfig() {
     }
 
     actualizarBadges(todosPedidos);
-    document.getElementById('header-sub').textContent = 'Supabase · ' + clientes.length + ' clientes · ' + productos.length + ' productos';
+    document.getElementById('header-sub').textContent = 'DB OK · ' + clientes.length + ' clientes · ' + productos.length + ' productos';
   } catch(e) {
     alert('Error al actualizar: ' + e.message);
   }
@@ -1567,7 +1569,7 @@ async function init() {
 
     if (c && p) {
       // Cache hit — carga instantánea
-      document.getElementById('header-sub').textContent = 'Supabase · ' + c.length + ' clientes · ' + p.length + ' productos (cache)';
+      document.getElementById('header-sub').textContent = 'DB OK · ' + c.length + ' clientes · ' + p.length + ' productos (cache)';
       document.getElementById('db-status-dot').style.background = '#22C55E';
     } else {
       // Cache miss — pedir a Sheets
@@ -1579,7 +1581,7 @@ async function init() {
       p = Array.isArray(pFresh) ? pFresh : [];
       cacheSet('manteco_clientes', c);
       cacheSet('manteco_productos', p);
-      document.getElementById('header-sub').textContent = 'Supabase · ' + c.length + ' clientes · ' + p.length + ' productos';
+      document.getElementById('header-sub').textContent = 'DB OK · ' + c.length + ' clientes · ' + p.length + ' productos';
       document.getElementById('db-status-dot').style.background = '#22C55E';
     }
 
