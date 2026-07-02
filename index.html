@@ -287,6 +287,43 @@ canvas { width: 100% !important; }
 .config-option { width: 100%; padding: 14px 16px; border: none; background: none; font-size: 15px; color: var(--text); cursor: pointer; font-family: inherit; text-align: left; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
 .config-option:last-child { border-bottom: none; }
 .config-option:active { background: var(--accent-light); }
+
+/* ── MODO RELOJ COCINA (display LED rojo, estilo timer industrial) ── */
+@font-face {
+  font-family: 'DSEG7';
+  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
+  font-display: swap;
+}
+#kitchen-clock {
+  position: fixed; inset: 0; z-index: 99999;
+  background: radial-gradient(ellipse at center, #141414 0%, #050505 75%);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4vmin;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#kitchen-clock.on { display: flex; }
+#kc-fecha {
+  color: #8f1a15; font-weight: 600;
+  font-size: clamp(0.85rem, 3vw, 1.9rem);
+  letter-spacing: 0.42em; text-transform: uppercase; padding-left: 0.42em;
+}
+#kc-hora {
+  font-family: 'DSEG7', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color: #ff2318; font-weight: 700;
+  font-size: clamp(3.4rem, 18vw, 19rem); line-height: 1;
+  letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 16px rgba(255,40,25,0.6), 0 0 55px rgba(255,25,15,0.4), 0 0 110px rgba(255,20,10,0.25);
+}
+#kc-close {
+  position: fixed; top: 20px; right: 24px; width: 46px; height: 46px;
+  border-radius: 50%; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.55);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+#kc-hint {
+  position: fixed; bottom: 26px; color: rgba(255,255,255,0.22);
+  font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -450,7 +487,7 @@ canvas { width: 100% !important; }
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <div style="text-align:right;color:white">
+      <div onclick="abrirRelojCocina()" title="Modo cocina — pantalla completa" style="text-align:right;color:white;cursor:pointer">
         <div id="clock-fecha" style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;opacity:0.7;margin-bottom:1px"></div>
         <div id="clock-hora" style="font-size:27px;font-weight:700;line-height:1;letter-spacing:0.5px;font-variant-numeric:tabular-nums"></div>
       </div>
@@ -1104,7 +1141,46 @@ function actualizarReloj() {
     now.getHours().toString().padStart(2,'0') + ':' +
     now.getMinutes().toString().padStart(2,'0') + ':' +
     now.getSeconds().toString().padStart(2,'0');
+
+  // Si el modo cocina está abierto, actualizarlo también
+  const kc = document.getElementById('kc-hora');
+  if (kc && document.getElementById('kitchen-clock').classList.contains('on')) {
+    const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    document.getElementById('kc-fecha').textContent =
+      `${dias[now.getDay()]} ${now.getDate()} de ${meses[now.getMonth()]}`;
+    kc.textContent =
+      now.getHours().toString().padStart(2,'0') + ':' +
+      now.getMinutes().toString().padStart(2,'0') + ':' +
+      now.getSeconds().toString().padStart(2,'0');
+  }
 }
+
+// ── MODO RELOJ COCINA (pantalla completa, estilo The Bear) ──
+let _kcWakeLock = null;
+async function abrirRelojCocina() {
+  const el = document.getElementById('kitchen-clock');
+  if (!el) return;
+  el.classList.add('on');
+  actualizarReloj(); // pinta la hora de una
+  try { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); } catch (e) {}
+  try { if ('wakeLock' in navigator) _kcWakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+async function cerrarRelojCocina() {
+  const el = document.getElementById('kitchen-clock');
+  if (el) el.classList.remove('on');
+  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
+  try { if (_kcWakeLock) { await _kcWakeLock.release(); _kcWakeLock = null; } } catch (e) {}
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarRelojCocina(); });
+// Re-tomar el wake lock si se vuelve a la pestaña con el modo cocina abierto
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' &&
+      document.getElementById('kitchen-clock')?.classList.contains('on') &&
+      'wakeLock' in navigator && !_kcWakeLock) {
+    try { _kcWakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+});
 actualizarReloj();
 setInterval(actualizarReloj, 1000);
 
@@ -4925,5 +5001,11 @@ supabaseAuth.auth.onAuthStateChange((event, session) => {
 // Fallback: si onAuthStateChange no dispara (navegadores que bloquean storage events)
 checkAuth();
 </script>
+<div id="kitchen-clock" onclick="cerrarRelojCocina()">
+  <button id="kc-close" onclick="event.stopPropagation();cerrarRelojCocina()">✕</button>
+  <div id="kc-fecha"></div>
+  <div id="kc-hora"></div>
+  <div id="kc-hint">Tocá para salir</div>
+</div>
 </body>
 </html>
