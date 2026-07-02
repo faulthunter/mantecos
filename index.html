@@ -1664,9 +1664,9 @@ async function init() {
     sel.innerHTML = '<option value="">— Seleccionar cliente —</option>' +
       clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
 
-    const manana = new Date();
-    manana.setDate(manana.getDate() + 1);
-    document.getElementById('fecha-entrega').value = manana.toISOString().split('T')[0];
+    const hoy = new Date();
+    document.getElementById('fecha-entrega').value =
+      new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
     addItem();
     hideLoading();
@@ -1775,9 +1775,9 @@ async function guardarPedido() {
     document.getElementById('check-envio').checked = false;
     document.getElementById('envio-monto-wrap').style.display = 'none';
     document.getElementById('pdf-opciones').style.display = 'none';
-    const manana = new Date();
-    manana.setDate(manana.getDate() + 1);
-    document.getElementById('fecha-entrega').value = manana.toISOString().split('T')[0];
+    const hoy = new Date();
+    document.getElementById('fecha-entrega').value =
+      new Date(hoy.getTime() - hoy.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     addItem();
 
     hideLoading();
