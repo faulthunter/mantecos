@@ -288,40 +288,33 @@ canvas { width: 100% !important; }
 .config-option:last-child { border-bottom: none; }
 .config-option:active { background: var(--accent-light); }
 
-/* ── MODO RELOJ COCINA (display LED rojo, estilo timer industrial) ── */
-@font-face {
-  font-family: 'DSEG7';
-  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
-  font-display: swap;
-}
+/* ── MODO RELOJ COCINA (limpio, tipo reloj de pared) ── */
 #kitchen-clock {
   position: fixed; inset: 0; z-index: 99999;
-  background: radial-gradient(ellipse at center, #141414 0%, #050505 75%);
+  background: radial-gradient(ellipse at center, #ffffff 0%, #f4efe6 100%);
   display: none; flex-direction: column;
-  align-items: center; justify-content: center; gap: 4vmin;
+  align-items: center; justify-content: center; gap: 3vmin;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 #kitchen-clock.on { display: flex; }
 #kc-fecha {
-  color: #8f1a15; font-weight: 600;
+  color: #b06a43; font-weight: 700;
   font-size: clamp(0.85rem, 3vw, 1.9rem);
-  letter-spacing: 0.42em; text-transform: uppercase; padding-left: 0.42em;
+  letter-spacing: 0.4em; text-transform: uppercase; padding-left: 0.4em;
 }
 #kc-hora {
-  font-family: 'DSEG7', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  color: #ff2318; font-weight: 700;
-  font-size: clamp(3.4rem, 18vw, 19rem); line-height: 1;
-  letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 16px rgba(255,40,25,0.6), 0 0 55px rgba(255,25,15,0.4), 0 0 110px rgba(255,20,10,0.25);
+  color: #23201c; font-weight: 700;
+  font-size: clamp(3.6rem, 19vw, 20rem); line-height: 1;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
 }
 #kc-close {
   position: fixed; top: 20px; right: 24px; width: 46px; height: 46px;
-  border-radius: 50%; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.55);
+  border-radius: 50%; background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.1); color: rgba(0,0,0,0.4);
   font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 #kc-hint {
-  position: fixed; bottom: 26px; color: rgba(255,255,255,0.22);
+  position: fixed; bottom: 26px; color: rgba(0,0,0,0.28);
   font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
 }
 </style>
