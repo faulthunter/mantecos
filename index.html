@@ -658,6 +658,13 @@ canvas { width: 100% !important; }
     <span class="search-icon">🔍</span>
     <input type="text" id="kanban-search" placeholder="Buscar por cliente..." oninput="filtrarKanban()" />
   </div>
+  <div id="box-por-cobrar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600">Pedidos por cobrar</div>
+      <div id="por-cobrar-count" style="font-size:12px;color:var(--muted);margin-top:1px">0 pedidos entregados</div>
+    </div>
+    <div id="por-cobrar-total" style="font-size:22px;font-weight:800;color:var(--accent)">$0</div>
+  </div>
   <div class="kanban-cols">
     <div class="kanban-col col-nuevo">
       <div class="kanban-col-header">Nuevo <span class="count" id="count-nuevo">0</span><span class="chevron">▾</span></div>
@@ -2720,6 +2727,14 @@ function renderKanban(pedidos) {
   const cont = document.querySelector('.kanban-cols');
   if (cont) cont.classList.toggle('tablero', layoutKanban === 'tablero');
   if (cont) cont.classList.toggle('lista-mode', contenidoKanban === 'lista');
+
+  // Recuadro "Pedidos por cobrar": total de entregados sin cobrar (todos, sin filtro de semana)
+  const porCobrar = (todosPedidos || []).filter(p => p.estado === 'Entregado');
+  const totalPorCobrar = porCobrar.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  const elT = document.getElementById('por-cobrar-total');
+  const elC = document.getElementById('por-cobrar-count');
+  if (elT) elT.textContent = '$' + Math.round(totalPorCobrar).toLocaleString('es-AR');
+  if (elC) elC.textContent = porCobrar.length + (porCobrar.length === 1 ? ' pedido entregado' : ' pedidos entregados');
   ESTADOS.forEach(estado => {
     const col   = document.getElementById(COL_IDS[estado]);
     const count = document.getElementById(COUNT_IDS[estado]);
