@@ -1412,33 +1412,29 @@ function imprimirPlanillaStock() {
   doc.setTextColor(...C_DARK);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('La Chica Manteca  ·  Planilla de Stock Semanal', M, 12);
+  doc.text('La Chica Manteca  ·  Planilla de Stock', M, 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...C_MID);
   const semana = getSemanaLabel();
   doc.text(semana, W - M, 12, { align: 'right' });
 
-  // Columnas
-  const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const colProducto = M;
+  // Layout: una sola área de anotación amplia por producto (sin días)
+  const colProducto   = M;
   const anchoProducto = 55;
-  const anchoDia = (W - M - anchoProducto - M) / dias.length;
-  const COL_DIAS = dias.map((_, i) => colProducto + anchoProducto + i * anchoDia);
-  const ROW_H = 10;
+  const xAnot     = colProducto + anchoProducto; // inicio del área de anotación
+  const ROW_H     = 20;                           // filas altas para escribir a mano
   let y = 26;
 
   // Header tabla
   doc.setFillColor(...C_DARK);
-  doc.rect(M, y, W - 2 * M, ROW_H, 'F');
+  doc.rect(M, y, W - 2 * M, 9, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('PRODUCTO', colProducto + 2, y + 6.5);
-  dias.forEach((dia, i) => {
-    doc.text(dia.toUpperCase(), COL_DIAS[i] + anchoDia / 2, y + 6.5, { align: 'center' });
-  });
-  y += ROW_H;
+  doc.text('PRODUCTO', colProducto + 2, y + 6);
+  doc.text('STOCK / MOVIMIENTOS', xAnot + 3, y + 6);
+  y += 9;
 
   // Productos únicos
   const productosStock = [
@@ -1449,44 +1445,33 @@ function imprimirPlanillaStock() {
     'Hojaldre',
     'Palmerita',
     'Danesa',
-    'Tira de canioncitos',
+    'Tira de cañoncitos',
   ];
 
   productosStock.forEach((prod, idx) => {
+    // Fondo alternado
     if (idx % 2 === 1) {
       doc.setFillColor(...C_ROW);
       doc.rect(M, y, W - 2 * M, ROW_H, 'F');
     }
+    // Borde de la fila y separador producto / anotación
     doc.setDrawColor(...C_LIGHT);
     doc.setLineWidth(0.2);
-    doc.line(M, y + ROW_H, W - M, y + ROW_H);
+    doc.rect(M, y, W - 2 * M, ROW_H);
+    doc.line(xAnot, y, xAnot, y + ROW_H);
 
+    // Guía punteada tenue para escribir sobre ella
+    doc.setLineDashPattern([1, 1.5], 0);
+    doc.line(xAnot + 3, y + ROW_H / 2, W - M - 3, y + ROW_H / 2);
+    doc.setLineDashPattern([], 0);
+
+    // Nombre del producto centrado verticalmente
     doc.setTextColor(...C_DARK);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(prod, colProducto + 2, y + 6.5);
-
-    // Líneas verticales entre días
-    dias.forEach((_, i) => {
-      doc.setDrawColor(...C_LIGHT);
-      doc.line(COL_DIAS[i], y, COL_DIAS[i], y + ROW_H);
-    });
-    doc.line(W - M, y, W - M, y + ROW_H);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(prod, colProducto + 3, y + ROW_H / 2 + 1);
 
     y += ROW_H;
-  });
-
-  // Fila de TOTAL al final
-  y += 2;
-  doc.setFillColor(...C_HEADER);
-  doc.rect(M, y, W - 2 * M, ROW_H, 'F');
-  doc.setTextColor(...C_DARK);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('TOTAL / OBSERVACIONES', colProducto + 2, y + 6.5);
-  dias.forEach((_, i) => {
-    doc.setDrawColor(...C_MID);
-    doc.line(COL_DIAS[i], y, COL_DIAS[i], y + ROW_H);
   });
 
   // Footer
