@@ -970,6 +970,7 @@ canvas { width: 100% !important; }
         <button class="config-option" onclick="selectConfig('clientes', '👥 Clientes')">👥 Clientes</button>
         <button class="config-option" onclick="selectConfig('cobrados', '✅ Pedidos cobrados')">✅ Pedidos cobrados</button>
         <button class="config-option" onclick="imprimirPlanillaStock()">📋 Imprimir planilla de stock</button>
+        <button class="config-option" onclick="imprimirListadoPrecios()">🏷️ Imprimir listado de precios</button>
       </div>
     </div>
 
@@ -1481,6 +1482,101 @@ function imprimirPlanillaStock() {
   doc.text('La Chica Manteca  ·  Laminados  ·  Planilla para uso interno', W / 2, H - 6, { align: 'center' });
 
   const nombreArchivo = 'planilla-stock-' + new Date().toLocaleDateString('es-AR').replace(/\//g, '-') + '.pdf';
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = nombreArchivo;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function imprimirListadoPrecios() {
+  document.getElementById('config-dropdown').classList.remove('open');
+  document.getElementById('config-menu-arrow').textContent = '▾';
+
+  if (!productos || productos.length === 0) {
+    alert('No hay productos cargados.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const W = 210, H = 297, M = 14;
+
+  const C_HEADER = [214, 190, 180];
+  const C_DARK   = [60, 45, 38];
+  const C_MID    = [120, 100, 88];
+  const C_LIGHT  = [200, 182, 172];
+  const C_ROW    = [250, 246, 243];
+
+  const fecha = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const dibujarHeader = () => {
+    doc.setFillColor(...C_HEADER);
+    doc.rect(0, 0, W, 20, 'F');
+    doc.setTextColor(...C_DARK);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('La Chica Manteca  ·  Lista de Precios', M, 13);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...C_MID);
+    doc.text(fecha, W - M, 13, { align: 'right' });
+  };
+
+  // Ordenar por nombre
+  const lista = [...productos].sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+
+  // Layout de dos columnas
+  const y0 = 28, ROW_H = 8, gap = 8;
+  const colW = (W - 2 * M - gap) / 2;
+  const colX = [M, M + colW + gap];
+  const filasPorColumna = Math.floor((H - M - y0) / ROW_H);
+  const porPagina = filasPorColumna * 2;
+
+  const dibujarFila = (p, x, y, fila) => {
+    if (fila % 2 === 1) {
+      doc.setFillColor(...C_ROW);
+      doc.rect(x, y, colW, ROW_H, 'F');
+    }
+    doc.setDrawColor(...C_LIGHT);
+    doc.setLineWidth(0.15);
+    doc.line(x, y + ROW_H, x + colW, y + ROW_H);
+
+    doc.setTextColor(...C_DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    let nombre = String(p.nombre);
+    const maxNombreW = colW - 30;
+    while (doc.getTextWidth(nombre) > maxNombreW && nombre.length > 4) nombre = nombre.slice(0, -1);
+    if (nombre !== String(p.nombre)) nombre = nombre.trim() + '…';
+    doc.text(nombre, x + 2, y + 5.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('$' + Number(p.precio || 0).toLocaleString('es-AR'), x + colW - 2, y + 5.5, { align: 'right' });
+  };
+
+  dibujarHeader();
+  lista.forEach((p, i) => {
+    const posEnPagina = i % porPagina;
+    if (i > 0 && posEnPagina === 0) { doc.addPage(); dibujarHeader(); }
+    const col  = Math.floor(posEnPagina / filasPorColumna); // 0 o 1
+    const fila = posEnPagina % filasPorColumna;
+    dibujarFila(p, colX[col], y0 + fila * ROW_H, fila);
+  });
+
+  // Footer en todas las páginas
+  const totalPags = doc.getNumberOfPages();
+  for (let pn = 1; pn <= totalPags; pn++) {
+    doc.setPage(pn);
+    doc.setTextColor(...C_MID);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('La Chica Manteca  ·  Lista de precios  ·  ' + fecha, W / 2, H - 6, { align: 'center' });
+  }
+
+  const nombreArchivo = 'lista-precios-' + new Date().toLocaleDateString('es-AR').replace(/\//g, '-') + '.pdf';
   const blob = doc.output('blob');
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
