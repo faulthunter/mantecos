@@ -251,8 +251,17 @@ export default async function handler(req, res) {
       baseParams.vat_breakdown      = [{ vat_rate_id: 21, taxable_base: neto, vat_subtotal: ivaAmt }];
     }
 
+    // Nombre del archivo: factura-{tipo}-{nro con ceros}-{razón social slug}.pdf
+    const razonSlug = receiverName
+      .normalize('NFD').replace(/[̀-ͯ]/g, '') // quitar tildes
+      .replace(/[^a-zA-Z0-9\s]/g, '')                   // quitar caracteres especiales
+      .trim().replace(/\s+/g, '_')                       // espacios a guiones bajos
+      .substring(0, 30);                                 // máximo 30 chars
+    const nroConCeros = String(result.voucherNumber).padStart(8, '0');
+    const fileName = `factura-${tipo}-${nroConCeros}-${razonSlug}.pdf`;
+
     const pdfData = {
-      file_name: `factura-${tipo}-${result.voucherNumber}.pdf`,
+      file_name: fileName,
       template: { name: templateName, params: baseParams }
     };
 
@@ -303,7 +312,7 @@ export default async function handler(req, res) {
         if (pdfResponse.ok) {
           const pdfBuffer = await pdfResponse.arrayBuffer();
           const pdfBytes  = Buffer.from(pdfBuffer);
-          const fileName  = pdfData.file_name;
+          // fileName ya definido arriba
           const uploadRes = await fetch(
             `${SUPA_URL}/storage/v1/object/facturas/${fileName}`,
             {
