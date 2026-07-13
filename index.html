@@ -375,7 +375,6 @@ canvas { width: 100% !important; }
       <div>
         <label>Estado</label>
         <select id="edit-estado">
-          <option value="Nuevo">Nuevo</option>
           <option value="Producción">Producción</option>
           <option value="Listo">Listo para entregar</option>
           <option value="Entregado">Entregado por cobrar</option>
@@ -497,7 +496,7 @@ canvas { width: 100% !important; }
 <!-- Header producción con badges (solo visible en módulo producción) -->
 <div id="header-produccion" style="display:none;background:var(--accent);padding:10px 20px 12px">
   <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Nuevos</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
+    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">A producir</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div><div id="badge-medialunas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
@@ -578,7 +577,6 @@ canvas { width: 100% !important; }
       <div>
         <label>Estado</label>
         <select id="estado">
-          <option value="Nuevo">Nuevo</option>
           <option value="Producción">Producción</option>
           <option value="Listo">Listo para entregar</option>
           <option value="Entregado">Entregado por cobrar</option>
@@ -666,10 +664,6 @@ canvas { width: 100% !important; }
     <div id="por-cobrar-total" style="font-size:22px;font-weight:800;color:var(--accent)">$0</div>
   </div>
   <div class="kanban-cols">
-    <div class="kanban-col col-nuevo">
-      <div class="kanban-col-header">Nuevo <span class="count" id="count-nuevo">0</span><span class="chevron">▾</span></div>
-      <div class="kanban-cards" id="col-nuevo"></div>
-    </div>
     <div class="kanban-col col-produccion">
       <div class="kanban-col-header">Producción <span class="count" id="count-produccion">0</span><span class="chevron">▾</span></div>
       <div class="kanban-cards" id="col-produccion"></div>
@@ -1337,11 +1331,11 @@ async function desarchivarPedido(id) {
   if (!confirm('¿Volver este pedido a estado Nuevo?')) return;
   showLoading('Desarchivando...');
   try {
-    const res = await apiActualizarEstado(id, 'Nuevo');
+    const res = await apiActualizarEstado(id, 'Producción');
     if (res.error) throw new Error(res.error);
     // Actualizar local
     const p = todosPedidos.find(p => p.id === id);
-    if (p) p.estado = 'Nuevo';
+    if (p) p.estado = 'Producción';
     renderCobrados();
     actualizarBadges(todosPedidos);
   } catch(e) {
@@ -1855,7 +1849,7 @@ async function guardarPedido() {
     // Resetear formulario
     document.getElementById('sel-cliente').value = '';
     document.getElementById('observaciones').value = '';
-    document.getElementById('estado').value = 'Nuevo';
+    document.getElementById('estado').value = 'Producción';
     document.getElementById('items-container').innerHTML = '';
     itemCount = 0;
     document.getElementById('btn-add').style.display = '';
@@ -2479,8 +2473,8 @@ function toggleLayoutKanban() {
 }
 
 function pedidoListaHTML(p) {
-  const LABELS = { 'Nuevo': 'Nuevo', 'Producción': 'Producción', 'Listo': 'Listo', 'Entregado': 'Entregado' };
-  const idx = ESTADOS.indexOf(p.estado);
+  const LABELS = { 'Producción': 'Producción', 'Listo': 'Listo', 'Entregado': 'Entregado' };
+  const idx = ESTADOS.indexOf(estadoNorm(p));
   const prev = idx > 0 ? ESTADOS[idx - 1] : null;
   const next = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
   return `
@@ -2501,9 +2495,9 @@ function pedidoListaHTML(p) {
 }
 
 
-const ESTADOS   = ['Nuevo', 'Producción', 'Listo', 'Entregado'];
-const COL_IDS   = { 'Nuevo': 'col-nuevo', 'Producción': 'col-produccion', 'Listo': 'col-listo', 'Entregado': 'col-entregado' };
-const COUNT_IDS = { 'Nuevo': 'count-nuevo', 'Producción': 'count-produccion', 'Listo': 'count-listo', 'Entregado': 'count-entregado' };
+const ESTADOS   = ['Producción', 'Listo', 'Entregado'];
+const COL_IDS   = { 'Producción': 'col-produccion', 'Listo': 'col-listo', 'Entregado': 'col-entregado' };
+const COUNT_IDS = { 'Producción': 'count-produccion', 'Listo': 'count-listo', 'Entregado': 'count-entregado' };
 
 function toggleCol(header) {
   header.closest('.kanban-col').classList.toggle('collapsed');
@@ -2546,7 +2540,7 @@ function actualizarBadges(pedidos) {
   if (filtroSemana === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtroSemana === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
-  const nuevos = filtrados.filter(p => p.estado === 'Nuevo').length;
+  const nuevos = filtrados.length;
   const t = calcularTotalesProduccion(pedidos, filtroSemana);
 
   document.getElementById('badge-nuevos').textContent     = nuevos;
@@ -2723,6 +2717,11 @@ function filtrarKanban() {
   renderKanban(pedidos);
 }
 
+// Normaliza el estado: pedidos legacy en 'Nuevo' se muestran en 'Producción'
+function estadoNorm(p) {
+  return (p && p.estado === 'Nuevo') ? 'Producción' : (p ? p.estado : '');
+}
+
 function renderKanban(pedidos) {
   const cont = document.querySelector('.kanban-cols');
   if (cont) cont.classList.toggle('tablero', layoutKanban === 'tablero');
@@ -2738,7 +2737,7 @@ function renderKanban(pedidos) {
   ESTADOS.forEach(estado => {
     const col   = document.getElementById(COL_IDS[estado]);
     const count = document.getElementById(COUNT_IDS[estado]);
-    const filtered = pedidos.filter(p => p.estado === estado);
+    const filtered = pedidos.filter(p => estadoNorm(p) === estado);
     count.textContent = filtered.length;
 
     if (filtered.length === 0) {
@@ -2755,8 +2754,8 @@ function renderKanban(pedidos) {
 }
 
 function pedidoCardHTML(p) {
-  const idx    = ESTADOS.indexOf(p.estado);
-  const LABELS = { 'Nuevo': 'Nuevo', 'Producción': 'Producción', 'Listo': 'Listo para entregar', 'Entregado': 'Entregado por cobrar' };
+  const idx    = ESTADOS.indexOf(estadoNorm(p));
+  const LABELS = { 'Producción': 'Producción', 'Listo': 'Listo para entregar', 'Entregado': 'Entregado por cobrar' };
   const prev   = idx > 0 ? ESTADOS[idx - 1] : null;
   const next   = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
   const btnPrev = prev ? `<button class="move-btn" onclick="moverPedido('${p.id}','${prev}')">← ${LABELS[prev]}</button>` : '';
@@ -2862,7 +2861,7 @@ function abrirEditar(p) {
   ).join('');
 
   document.getElementById('edit-fecha').value         = p.fecha || '';
-  document.getElementById('edit-estado').value        = p.estado || 'Nuevo';
+  document.getElementById('edit-estado').value        = estadoNorm(p) || 'Producción';
   document.getElementById('edit-observaciones').value = p.observaciones || '';
 
   document.getElementById('edit-items-container').innerHTML = '';
@@ -3171,7 +3170,7 @@ async function confirmarParcial() {
 
     // 2. Crear pedido nuevo con los items pendientes (sin fecha)
     const resNuevo = await apiNuevoPedido(
-      pedidoParcial.cliente, '', 'Nuevo',
+      pedidoParcial.cliente, '', 'Producción',
       'Pendiente de ' + pedidoParcial.id,
       itemsPendientes, 0
     );
