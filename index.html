@@ -1967,10 +1967,30 @@ function confirmarGenerarPDF() {
   const envioMonto = parseFloat(document.getElementById('pdf-envio-monto').value) || 0;
 
   const pedido = pedidoParaPDF;
+  const envioFinal = checkEnvio ? Math.max(0, envioMonto) : 0;
   cerrarModalPDF();
 
   // Generar PDF con opciones del modal
   generarPDFConOpciones(pedido, checkEnvio, envioMonto, checkIva);
+
+  // Guardar el envío en el pedido si cambió (el IVA NO se guarda: es solo para el PDF)
+  persistirEnvioPedido(pedido.id, envioFinal);
+}
+
+async function persistirEnvioPedido(id, envioFinal) {
+  const p = todosPedidos.find(x => x.id === id);
+  if (!p) return;
+  if ((Number(p.envio) || 0) === envioFinal) return; // sin cambios, no tocar la base
+  const itemsSum = (p.items || []).reduce((s, i) => s + Number(i.precio) * Number(i.cantidad), 0);
+  const nuevoTotal = itemsSum + envioFinal;
+  try {
+    await supa.patch('pedidos', `id=eq.${id}`, { envio: envioFinal, total: nuevoTotal });
+    p.envio = envioFinal;
+    p.total = nuevoTotal;
+    if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
+  } catch (e) {
+    console.error('No se pudo guardar el envío del PDF:', e);
+  }
 }
 
 function generarPDFConOpciones(pedido, conEnvio, costoEnvio, conIva) {
