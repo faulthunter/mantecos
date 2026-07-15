@@ -135,6 +135,10 @@ textarea { resize: none; }
 .items-list.open { display: block; }
 .items-list-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 2px 0; }
 .items-list-row span:last-child { color: var(--text); font-weight: 500; }
+.envio-wrap { margin-top: 4px; }
+.envio-edit { display: flex; gap: 6px; margin-top: 5px; align-items: center; }
+.envio-edit input { width: 100px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; }
+.envio-edit button { padding: 6px 12px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
@@ -2779,7 +2783,13 @@ function pedidoCardHTML(p) {
           <h3>${p.cliente}</h3>
           <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}</div>
           ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
-          ${p.envio ? `<div class="fecha">🚚 Envío: $${Math.round(p.envio).toLocaleString('es-AR')}</div>` : ''}
+          <div class="envio-wrap">
+            <span class="items-toggle" onclick="toggleEnvioEdit('${p.id}', this)">🚚 Envío: $${Math.round(p.envio || 0).toLocaleString('es-AR')} ▸</span>
+            <div class="envio-edit" id="envio-edit-${p.id}" style="display:none">
+              <input type="number" min="0" id="envio-input-${p.id}" value="${p.envio || 0}" onclick="event.stopPropagation()" />
+              <button onclick="guardarEnvio('${p.id}')">Guardar</button>
+            </div>
+          </div>
           ${itemsHTML}
         </div>
         <div class="total-badge">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
@@ -2802,6 +2812,37 @@ function toggleItems(id, btn) {
   const isOpen = el.classList.toggle('open');
   btn.textContent = btn.textContent.replace(isOpen ? '▸' : '▾', isOpen ? '▾' : '▸');
 }
+
+function toggleEnvioEdit(id, el) {
+  const box = document.getElementById('envio-edit-' + id);
+  if (!box) return;
+  const abrir = box.style.display === 'none';
+  box.style.display = abrir ? 'flex' : 'none';
+  el.textContent = el.textContent.replace(abrir ? '▸' : '▾', abrir ? '▾' : '▸');
+  if (abrir) { const inp = document.getElementById('envio-input-' + id); if (inp) { inp.focus(); inp.select(); } }
+}
+
+async function guardarEnvio(id) {
+  const inp = document.getElementById('envio-input-' + id);
+  if (!inp) return;
+  const nuevoEnvio = Math.max(0, parseFloat(inp.value) || 0);
+  const p = todosPedidos.find(x => x.id === id);
+  if (!p) return;
+  // Total = suma de items + envío (sin IVA; el IVA se aplica recién en facturación)
+  const itemsSum = (p.items || []).reduce((s, i) => s + Number(i.precio) * Number(i.cantidad), 0);
+  const nuevoTotal = itemsSum + nuevoEnvio;
+  showLoading();
+  try {
+    await supa.patch('pedidos', `id=eq.${id}`, { envio: nuevoEnvio, total: nuevoTotal });
+    p.envio = nuevoEnvio;
+    p.total = nuevoTotal;
+    filtrarKanban();
+  } catch (e) {
+    alert('No se pudo guardar el envío: ' + e.message);
+  }
+  hideLoading();
+}
+
 
 async function moverPedido(id, nuevoEstado) {
   showLoading('Actualizando estado...');
