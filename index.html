@@ -4087,11 +4087,19 @@ async function confirmarFacturacion(id) {
 
   try {
     const session = await supabaseAuth.auth.getSession();
-    const userEmail = session?.data?.session?.user?.email || '';
+    const accessToken = session?.data?.session?.access_token || '';
+    if (!accessToken) {
+      showStatus('status-facturar', '⚠️ Sesión expirada. Iniciá sesión de nuevo.', 'err');
+      if (btn) { btn.disabled = false; btn.textContent = 'Facturar'; }
+      return;
+    }
 
     const res = await fetch('/api/facturar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + accessToken,
+      },
       body: JSON.stringify({
         tipo,
         cuitCliente,
@@ -4102,7 +4110,6 @@ async function confirmarFacturacion(id) {
         puntoVenta,
         pedidoId: id,
         cliente: pedido?.cliente || '',
-        userEmail,
         items: pedido?.items || []
       })
     });

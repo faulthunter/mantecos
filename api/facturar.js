@@ -3,24 +3,56 @@ const require = createRequire(import.meta.url);
 const Afip = require('@afipsdk/afip.js');
 
 const EMAILS_OK = ['juliandilullo@gmail.com', 'sof.cosen@gmail.com'];
+const ALLOWED_ORIGINS = ['https://mantecos.vercel.app'];
+
+// Supabase config (compartida con auth y persistencia)
+const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+
+// Verifica el access_token contra Supabase Auth. Devuelve el email verificado
+// o null si el token es inválido/expirado o el email no está en la whitelist.
+async function verificarUsuario(req) {
+  const auth = req.headers['authorization'] || req.headers['Authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) return null;
+  try {
+    const r = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { apikey: SUPA_ANON, Authorization: `Bearer ${token}` }
+    });
+    if (!r.ok) return null;
+    const u = await r.json();
+    const email = (u?.email || '').toLowerCase();
+    if (!email || !EMAILS_OK.includes(email)) return null;
+    return email;
+  } catch (e) {
+    console.error('verificarUsuario error:', e.message);
+    return null;
+  }
+}
+
+function setCors(req, res) {
+  const origin = req.headers.origin || '';
+  const allow  = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  res.setHeader('Access-Control-Allow-Origin',  allow);
+  res.setHeader('Vary',                         'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Autenticación real: verificar token contra Supabase Auth
+  const emailVerificado = await verificarUsuario(req);
+  if (!emailVerificado) {
+    return res.status(401).json({ error: 'No autorizado. Iniciá sesión de nuevo.' });
+  }
+
   try {
-    const { tipo, cuitCliente, condicionIva, impTotal, envio: envioRaw, conIva, userEmail, items: pedidoItems } = req.body;
-
-    if (!EMAILS_OK.includes(userEmail)) {
-      return res.status(403).json({ error: 'No autorizado' });
-    }
-
-    // Supabase config
-    const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
-    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+    const { tipo, cuitCliente, condicionIva, impTotal, envio: envioRaw, conIva, items: pedidoItems } = req.body;
+    const userEmail = emailVerificado;
 
     // ── CHEQUEO ANTI-DUPLICADO ───────────────────────────────
     const pedidoId = req.body.pedidoId || '';

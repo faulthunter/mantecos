@@ -3,33 +3,61 @@ const require = createRequire(import.meta.url);
 const Afip = require('@afipsdk/afip.js');
 
 const EMAILS_OK = ['juliandilullo@gmail.com', 'sof.cosen@gmail.com'];
+const ALLOWED_ORIGINS = ['https://mantecos.vercel.app'];
+
+const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
+
+async function verificarUsuario(req) {
+  const auth = req.headers['authorization'] || req.headers['Authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) return null;
+  try {
+    const r = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { apikey: SUPA_ANON, Authorization: `Bearer ${token}` }
+    });
+    if (!r.ok) return null;
+    const u = await r.json();
+    const email = (u?.email || '').toLowerCase();
+    if (!email || !EMAILS_OK.includes(email)) return null;
+    return email;
+  } catch (e) {
+    console.error('verificarUsuario error:', e.message);
+    return null;
+  }
+}
+
+function setCors(req, res) {
+  const origin = req.headers.origin || '';
+  const allow  = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  res.setHeader('Access-Control-Allow-Origin',  allow);
+  res.setHeader('Vary',                         'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
 
 // Este endpoint NUNCA llama a createNextVoucher / WSFE.
 // Solo reconstruye el PDF a partir de una factura YA EMITIDA (CAE existente)
 // y lo sube a Supabase Storage. No emite nada nuevo ante AFIP.
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  const emailVerificado = await verificarUsuario(req);
+  if (!emailVerificado) {
+    return res.status(401).json({ error: 'No autorizado. Iniciá sesión de nuevo.' });
+  }
+
   try {
     const {
-      userEmail, pedidoId, tipo, nro, cae, caeVto,
+      pedidoId, tipo, nro, cae, caeVto,
       cliente, cuitCliente, condicionIva, total, conIva, items
     } = req.body;
-
-    if (!EMAILS_OK.includes(userEmail)) {
-      return res.status(403).json({ error: 'No autorizado' });
-    }
     if (!cae || !nro) {
       return res.status(400).json({ error: 'Faltan CAE o número de comprobante — no se puede regenerar sin una factura ya emitida' });
     }
-
-    const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
-    const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
 
     const CERT = (process.env.AFIP_CERT || '').replace(/\\n/g, '\n').trim();
     const KEY  = (process.env.AFIP_KEY  || '').replace(/\\n/g, '\n').trim();
