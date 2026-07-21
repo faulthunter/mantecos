@@ -553,7 +553,6 @@ canvas { width: 100% !important; }
 <nav class="nav" id="nav-produccion" style="display:none">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
-  <button class="nav-btn"        id="nav-amasados" onclick="showPage('amasados'); renderAmasados()">🧮 Amasados</button>
 </nav>
 
 <nav class="nav" id="nav-costeo-tabs" style="display:none">
@@ -679,28 +678,6 @@ canvas { width: 100% !important; }
     <div class="kanban-col col-entregado">
       <div class="kanban-col-header">Entregado por cobrar <span class="count" id="count-entregado">0</span><span class="chevron">▾</span></div>
       <div class="kanban-cards" id="col-entregado"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ── PÁGINA CALCULADORA DE AMASADOS ──────────────────── -->
-<div class="page" id="page-amasados">
-  <div style="margin-top:16px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text)">🧮 Calculadora de amasados</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">Amasados a producir según lo pedido</div>
-      </div>
-      <button class="btn-refresh" onclick="renderAmasados()">↻ Actualizar</button>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px">
-      <button class="period-btn"        id="amas-filtro-todos"   onclick="setFiltroAmasados('todos',this)">Todos</button>
-      <button class="period-btn active" id="amas-filtro-esta"    onclick="setFiltroAmasados('esta',this)">Esta semana</button>
-      <button class="period-btn"        id="amas-filtro-proxima" onclick="setFiltroAmasados('proxima',this)">Próxima semana</button>
-    </div>
-    <div id="amasados-lista"></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5">
-      💡 Las unidades por amasado se guardan en este dispositivo. Editá el valor de cada producto y el cálculo se actualiza solo.
     </div>
   </div>
 </div>
@@ -2576,98 +2553,6 @@ function actualizarBadges(pedidos) {
   document.getElementById('badge-palmeritas').textContent = t.palmeritas;
   document.getElementById('badge-danesas').textContent    = t.danesas;
 
-  // Si la calculadora de amasados está visible, refrescarla
-  if (document.getElementById('page-amasados')?.classList.contains('active')) renderAmasados();
-}
-
-// ── Calculadora de amasados ──────────────────────────────
-const CATEGORIAS_AMASADO = [
-  { key: 'medialunas', label: 'Medialunas' },
-  { key: 'croissants', label: 'Croissants' },
-  { key: 'panchoco',   label: 'Pan de choco' },
-  { key: 'trenzas',    label: 'Trenzas' },
-  { key: 'hojaldres',  label: 'Hojaldres' },
-  { key: 'palmeritas', label: 'Palmeritas' },
-  { key: 'danesas',    label: 'Danesas' },
-];
-let filtroAmasados = 'esta'; // 'todos' | 'esta' | 'proxima'
-
-function getUnidadesPorAmasado() {
-  try { return JSON.parse(localStorage.getItem('manteco_amasados') || '{}'); }
-  catch { return {}; }
-}
-function setUnidadPorAmasado(key, valor) {
-  const cfg = getUnidadesPorAmasado();
-  cfg[key] = Number(valor) || 0;
-  localStorage.setItem('manteco_amasados', JSON.stringify(cfg));
-  renderAmasados();
-}
-function getStockActual() {
-  try { return JSON.parse(localStorage.getItem('manteco_stock') || '{}'); }
-  catch { return {}; }
-}
-function setStockActual(key, valor) {
-  const cfg = getStockActual();
-  cfg[key] = Number(valor) || 0;
-  localStorage.setItem('manteco_stock', JSON.stringify(cfg));
-  renderAmasados();
-}
-function setFiltroAmasados(filtro, btn) {
-  filtroAmasados = filtro;
-  document.querySelectorAll('#amas-filtro-todos, #amas-filtro-esta, #amas-filtro-proxima')
-    .forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderAmasados();
-}
-
-function renderAmasados() {
-  const cont = document.getElementById('amasados-lista');
-  if (!cont) return;
-  const totales = calcularTotalesProduccion(todosPedidos || [], filtroAmasados);
-  const cfgUpa   = getUnidadesPorAmasado();
-  const cfgStock = getStockActual();
-
-  cont.innerHTML = CATEGORIAS_AMASADO.map(cat => {
-    const pedidas  = totales[cat.key] || 0;
-    const upa      = Number(cfgUpa[cat.key]) || 0;
-    const stock    = Number(cfgStock[cat.key]) || 0;
-    const aProducir = Math.max(0, pedidas - stock);
-    const amasados  = (upa > 0 && aProducir > 0) ? Math.ceil(aProducir / upa) : 0;
-    const sobran    = (amasados > 0) ? (amasados * upa - aProducir) : 0;
-
-    let resultado;
-    if (upa <= 0) {
-      resultado = `<span style="color:var(--muted);font-style:italic">definí unidades por amasado</span>`;
-    } else if (aProducir <= 0) {
-      resultado = `<span style="color:#16a34a;font-weight:700">✓ Cubierto con el stock</span>`;
-    } else {
-      resultado = `<span style="color:var(--text)">A producir <b>${aProducir}</b> u.</span>
-        <span style="color:var(--muted)"> → </span>
-        <span style="color:var(--accent);font-weight:800;font-size:18px">${amasados}</span>
-        <span style="color:var(--muted)"> amasado${amasados === 1 ? '' : 's'}${sobran > 0 ? ` · sobran ${sobran}` : ''}</span>`;
-    }
-
-    return `
-    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;background:var(--surface)">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-        <div style="font-weight:700;color:var(--text);font-size:15px">${cat.label}</div>
-        <div style="font-size:13px;color:var(--muted)"><b style="color:var(--text)">${pedidas}</b> u. pedidas</div>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <label style="flex:1;font-size:11px;color:var(--muted)">Unid. por amasado
-          <input type="number" min="0" inputmode="numeric" value="${upa || ''}" placeholder="0"
-            onchange="setUnidadPorAmasado('${cat.key}', this.value)"
-            style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px;box-sizing:border-box" />
-        </label>
-        <label style="flex:1;font-size:11px;color:var(--muted)">Stock actual
-          <input type="number" min="0" inputmode="numeric" value="${stock || ''}" placeholder="0"
-            onchange="setStockActual('${cat.key}', this.value)"
-            style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-family:inherit;font-size:15px;box-sizing:border-box" />
-        </label>
-      </div>
-      <div style="font-size:13px;text-align:center;padding-top:2px;border-top:1px dashed var(--border);padding-top:8px">${resultado}</div>
-    </div>`;
-  }).join('');
 }
 
 async function loadKanban() {
