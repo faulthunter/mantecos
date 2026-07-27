@@ -493,6 +493,7 @@ canvas { width: 100% !important; }
         <div id="clock-hora" style="font-size:27px;font-weight:700;line-height:1;letter-spacing:0.5px;font-variant-numeric:tabular-nums"></div>
       </div>
       <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
+      <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">↻ Refrescar</button>
     </div>
   </div>
 </header>
@@ -944,7 +945,7 @@ canvas { width: 100% !important; }
           <span id="config-menu-label">⚙️ Seleccioná una opción</span>
           <span id="config-menu-arrow">▾</span>
         </button>
-        <button onclick="refreshConfig()" style="padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:15px;cursor:pointer;font-family:inherit;color:var(--muted);flex-shrink:0">↻</button>
+        <button onclick="refreshAll()" style="padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:15px;cursor:pointer;font-family:inherit;color:var(--muted);flex-shrink:0">↻</button>
       </div>
       <div class="config-dropdown" id="config-dropdown">
         <button class="config-option" onclick="selectConfig('stats', '📊 Estadísticas')">📊 Estadísticas</button>
@@ -1239,7 +1240,7 @@ function showPage(name) {
   }
 }
 
-async function refreshConfig() {
+async function refreshAll() {
   // Invalidar cache
   cacheInvalidate('manteco_clientes');
   cacheInvalidate('manteco_productos');
@@ -1276,6 +1277,11 @@ async function refreshConfig() {
 
     actualizarBadges(todosPedidos);
     document.getElementById('header-sub').textContent = 'DB OK · ' + clientes.length + ' clientes · ' + productos.length + ' productos';
+
+    // Refrescar el Kanban si está visible
+    if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
+    // Refrescar facturación si está visible
+    if (document.getElementById('page-facturacion')?.classList.contains('active')) cargarPedidosFacturacion();
   } catch(e) {
     alert('Error al actualizar: ' + e.message);
   }
