@@ -3779,18 +3779,21 @@ async function cargarPedidosFacturacion() {
     // de noche cuente como "hoy" y no como el día siguiente.
     const fechaCreacion = (p) => p.created_at ? fechaARG(p.created_at) : '';
 
+    // Usar fecha de ENTREGA del pedido (p.fecha), para que coincida con el criterio
+    // de estadísticas ("cuánto le vendí a X en el mes" = pedidos con entrega en el mes).
+    // No excluimos por estado: a veces se factura antes de cobrar.
     pedidosFacturacion = pedidos.filter(p => {
-      const fc = fechaCreacion(p);
-      if (!fc) {
-        // Sin fecha de creación tampoco — mostrar siempre por seguridad
+      const fe = p.fecha || '';
+      if (!fe) {
+        // Sin fecha de entrega — mostrar siempre por seguridad
         if (clienteFiltro && p.cliente !== clienteFiltro) return false;
         return true;
       }
-      if (desde && fc < desde) return false;
-      if (hasta  && fc > hasta)  return false;
+      if (desde && fe < desde) return false;
+      if (hasta  && fe > hasta)  return false;
       if (clienteFiltro && p.cliente !== clienteFiltro) return false;
       return true;
-    }).sort((a, b) => fechaCreacion(b).localeCompare(fechaCreacion(a)));
+    }).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
