@@ -1633,7 +1633,13 @@ async function apiNuevoPedido(cliente, fecha, estado, observaciones, items, envi
 }
 
 async function apiActualizarEstado(id, estado) {
-  await supa.patch('pedidos', `id=eq.${id}`, { estado });
+  const patch = { estado };
+  // Al pasar a "Entregado por cobrar", registrar la fecha real de entrega
+  if (estado === 'Entregado') patch.fecha_entregado = fechaARG();
+  await supa.patch('pedidos', `id=eq.${id}`, patch);
+  // Actualizar cache local
+  const p = todosPedidos.find(x => x.id === id);
+  if (p && estado === 'Entregado') p.fecha_entregado = patch.fecha_entregado;
   return { ok: true };
 }
 
@@ -1646,9 +1652,16 @@ async function apiEliminarPedido(id) {
 async function apiEditarPedido(id, cliente, fecha, estado, observaciones, items, envio, iva) {
   const base  = items.reduce((s, i) => s + parseFloat(i.precio) * parseInt(i.cantidad), 0) + (envio || 0);
   const total = iva ? Math.round(base * 1.21) : base;
-  await supa.patch('pedidos', `id=eq.${id}`, { cliente, fecha, estado, observaciones, total, envio: envio || 0 });
+  const patch = { cliente, fecha, estado, observaciones, total, envio: envio || 0 };
+  // Si el estado nuevo es "Entregado" y el pedido no tenía fecha_entregado aún, la registramos
+  const pActual = todosPedidos.find(x => x.id === id);
+  if (estado === 'Entregado' && pActual && !pActual.fecha_entregado) {
+    patch.fecha_entregado = fechaARG();
+  }
+  await supa.patch('pedidos', `id=eq.${id}`, patch);
   await supa.delete('items_pedido', `pedido_id=eq.${id}`);
   if (items.length > 0) await Promise.all(items.map(it => supa.post('items_pedido', { pedido_id: id, nombre: it.nombre, cantidad: parseInt(it.cantidad), precio: parseFloat(it.precio) })));
+  if (patch.fecha_entregado && pActual) pActual.fecha_entregado = patch.fecha_entregado;
   return { ok: true, total };
 }
 
@@ -2607,13 +2620,15 @@ function esPedidoVencido(p) {
   return fecha < lunes;
 }
 
-// Días desde la fecha de entrega (para pedidos Entregado por cobrar).
-// Devuelve un chip HTML con color según antigüedad, o '' si no aplica.
+// Días desde que se entregó el pedido (para pedidos Entregado por cobrar).
+// Usa fecha_entregado (fecha real de entrega, guardada al mover al estado); si no está
+// (pedidos históricos), cae a la fecha de entrega prevista.
 function chipDiasEntregado(p) {
-  if (p.estado !== 'Entregado' || !p.fecha) return '';
-  const hoyStr = fechaARG();
-  const hoy      = new Date(hoyStr + 'T12:00:00');
-  const entrega  = new Date(p.fecha + 'T12:00:00');
+  if (p.estado !== 'Entregado') return '';
+  const base = p.fecha_entregado || p.fecha;
+  if (!base) return '';
+  const hoy      = new Date(fechaARG() + 'T12:00:00');
+  const entrega  = new Date(base + 'T12:00:00');
   const dias = Math.floor((hoy - entrega) / 86400000);
   if (dias < 0) return ''; // entrega futura, no aplica
   let bg = '#F1F5F9', fg = '#475569'; // gris: recién entregado
