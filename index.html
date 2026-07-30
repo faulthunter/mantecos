@@ -2488,7 +2488,7 @@ function pedidoListaHTML(p) {
     <div class="lista-pedido-row">
       <div style="flex:1;min-width:0">
         <div class="lista-cliente">${p.cliente}</div>
-        <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}</div>
+        <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
       </div>
       <div class="lista-total">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
       <div class="lista-acciones">
@@ -2607,6 +2607,22 @@ function esPedidoVencido(p) {
   return fecha < lunes;
 }
 
+// Días desde la fecha de entrega (para pedidos Entregado por cobrar).
+// Devuelve un chip HTML con color según antigüedad, o '' si no aplica.
+function chipDiasEntregado(p) {
+  if (p.estado !== 'Entregado' || !p.fecha) return '';
+  const hoyStr = fechaARG();
+  const hoy      = new Date(hoyStr + 'T12:00:00');
+  const entrega  = new Date(p.fecha + 'T12:00:00');
+  const dias = Math.floor((hoy - entrega) / 86400000);
+  if (dias < 0) return ''; // entrega futura, no aplica
+  let bg = '#F1F5F9', fg = '#475569'; // gris: recién entregado
+  if (dias >= 3 && dias <= 7) { bg = '#FEF3C7'; fg = '#92400E'; } // amarillo
+  if (dias >= 8)              { bg = '#FEE2E2'; fg = '#B91C1C'; } // rojo
+  const txt = dias === 0 ? 'Hoy' : (dias === 1 ? 'Hace 1 día' : `Hace ${dias} días`);
+  return ` <span style="background:${bg};color:${fg};font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">⏱ ${txt}</span>`;
+}
+
 function pedidoEnSemana(p, offsetSemanas) {
   if (!p.fecha) return true;
   const fecha = new Date(p.fecha + 'T12:00:00');
@@ -2692,7 +2708,7 @@ function pedidoCardHTML(p) {
       <div class="pedido-card-top">
         <div>
           <h3>${p.cliente}</h3>
-          <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}</div>
+          <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
           ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
           <div class="envio-wrap">
             <span class="items-toggle" onclick="toggleEnvioEdit('${p.id}', this)">🚚 Envío: $${Math.round(p.envio || 0).toLocaleString('es-AR')} ▸</span>
