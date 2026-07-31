@@ -999,7 +999,7 @@ canvas { width: 100% !important; }
       </div>
       <div class="card"><div class="card-title">Ventas por día</div><div class="chart-container" style="height:180px"><canvas id="chart-ventas"></canvas></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div id="ranking-productos"><div class="empty-stats">Sin datos</div></div></div>
-      <div class="card"><div class="card-title">Clientes top</div><div id="ranking-clientes"><div class="empty-stats">Sin datos</div></div></div>
+      <div class="card"><div class="card-title">Ranking de clientes</div><div id="ranking-clientes" style="max-height:480px;overflow-y:auto"><div class="empty-stats">Sin datos</div></div></div>
       
       <div class="card"><div class="card-title">Actividad por día de semana</div><div class="chart-container" style="height:140px"><canvas id="chart-diasemana"></canvas></div></div>
 
@@ -3605,7 +3605,7 @@ function renderStats() {
     cliMap[k].total   += Number(p.total) || 0;
     cliMap[k].pedidos += 1;
   });
-  const cliRanking = Object.entries(cliMap).sort((a,b) => b[1].total - a[1].total).slice(0, 8);
+  const cliRanking = Object.entries(cliMap).sort((a,b) => b[1].total - a[1].total);
   const maxCli = cliRanking.length > 0 ? cliRanking[0][1].total : 1;
 
   document.getElementById('ranking-clientes').innerHTML = cliRanking.length === 0
