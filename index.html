@@ -977,6 +977,7 @@ canvas { width: 100% !important; }
         <button class="btn-primary" id="btn-aplicar-stats" onclick="aplicarFiltroStats()" style="margin-top:10px;padding:10px 16px;font-size:14px">Aplicar filtro</button>
         <div style="font-size:12px;color:var(--muted)" id="stats-period-label">Últimos 7 días</div>
       </div>
+      <div class="card"><div class="card-title">Evolución mes a mes<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">últimos 12 meses</span></div><div class="chart-container" style="height:220px"><canvas id="chart-mensual"></canvas></div></div>
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Ventas cargadas</div><div class="kpi-value accent" id="kpi-total">$0</div><div class="kpi-sub" id="kpi-total-sub">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">—</div></div>
@@ -3312,6 +3313,7 @@ let statsPeriod = '7d';
 let statsDesde = null;
 let statsHasta = null;
 let chartVentas = null;
+let chartMensual = null;
 let chartEstados = null;
 let chartDiaSemana = null;
 let chartProductos = null;
@@ -3717,6 +3719,72 @@ function renderStats() {
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 11 } } },
         y: { grid: { color: '#F0EBE2' }, ticks: { font: { size: 10 }, stepSize: 1 } }
+      }
+    }
+  });
+
+  renderEvolucionMensual();
+}
+
+// Gráfico de evolución mensual (últimos 12 meses, independiente del filtro de período).
+// Suma pedidos por mes según created_at en horario Argentina.
+function renderEvolucionMensual() {
+  const canvas = document.getElementById('chart-mensual');
+  if (!canvas) return;
+
+  const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const hoy = new Date();
+  // Generar buckets de los últimos 12 meses (más viejo -> más nuevo)
+  const buckets = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    buckets.push({ key, label: MESES[d.getMonth()] + (d.getMonth() === 0 || i === 11 ? " '" + String(d.getFullYear()).slice(-2) : ''), total: 0, count: 0 });
+  }
+  const byKey = Object.fromEntries(buckets.map(b => [b.key, b]));
+
+  (statsAllPedidos || []).forEach(p => {
+    if (!p.created_at) return;
+    const fARG = fechaARG(p.created_at);           // "YYYY-MM-DD" en horario Argentina
+    const key = fARG.slice(0, 7);                  // "YYYY-MM"
+    if (byKey[key]) {
+      byKey[key].total += Number(p.total) || 0;
+      byKey[key].count += 1;
+    }
+  });
+
+  const labels = buckets.map(b => b.label);
+  const values = buckets.map(b => Math.round(b.total));
+  const counts = buckets.map(b => b.count);
+
+  if (chartMensual) chartMensual.destroy();
+  const ctx = canvas.getContext('2d');
+  chartMensual = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map((_, i) => i === values.length - 1 ? 'rgba(196,105,42,0.95)' : 'rgba(196,105,42,0.55)'),
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => '$' + Math.round(ctx.raw).toLocaleString('es-AR') + ' · ' + counts[ctx.dataIndex] + ' pedidos'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#F0EBE2' }, ticks: { font: { size: 10 }, callback: v => '$' + (v >= 1000000 ? (v/1000000).toFixed(1) + 'M' : v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } }
       }
     }
   });
