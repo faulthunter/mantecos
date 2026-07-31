@@ -978,12 +978,12 @@ canvas { width: 100% !important; }
         <div style="font-size:12px;color:var(--muted)" id="stats-period-label">Últimos 7 días</div>
       </div>
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">Facturación</div><div class="kpi-value accent" id="kpi-total">$0</div><div class="kpi-sub" id="kpi-total-sub">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Ventas cargadas</div><div class="kpi-value accent" id="kpi-total">$0</div><div class="kpi-sub" id="kpi-total-sub">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" id="kpi-ticket">$0</div><div class="kpi-sub">por pedido</div></div>
         <div class="kpi-card"><div class="kpi-label">Clientes activos</div><div class="kpi-value" id="kpi-clientes">0</div><div class="kpi-sub">en el período</div></div>
       </div>
-      <div class="card"><div class="card-title">Ventas por día</div><div class="chart-container" style="height:180px"><canvas id="chart-ventas"></canvas></div></div>
+      <div class="card"><div class="card-title">Pedidos cargados por día</div><div class="chart-container" style="height:180px"><canvas id="chart-ventas"></canvas></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div id="ranking-productos"><div class="empty-stats">Sin datos</div></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div class="chart-container" style="height:220px"><canvas id="chart-productos"></canvas></div></div>
       <div class="card"><div class="card-title">Clientes top</div><div id="ranking-clientes"><div class="empty-stats">Sin datos</div></div></div>
@@ -3322,18 +3322,10 @@ function renderStatsCliente() {
   const container  = document.getElementById('stats-cliente-result');
   if (!clienteSel) { container.innerHTML = ''; return; }
 
-  // Filtrar pedidos cobrados del cliente en el período actual
+  // Filtrar todos los pedidos del cliente cargados en el período (mismo criterio que renderStats)
   const pedidosCliente = statsAllPedidos.filter(p => {
-    if (!['Cobrado', 'Entregado', 'Archivado'].includes(p.estado)) return false;
     if (p.cliente !== clienteSel) return false;
-    // Filtrar por período sin restricción de estado
-    let fecha = p.fecha ? new Date(p.fecha + 'T12:00:00') : null;
-    if (!fecha) {
-      const ts = parseInt(String(p.id).replace('P',''));
-      if (!isNaN(ts)) fecha = new Date(ts);
-    }
-    if (!fecha) return true;
-    return fecha >= statsDesde && fecha <= statsHasta;
+    return pedidoEnPeriodo(p);
   });
 
   if (pedidosCliente.length === 0) {
@@ -3356,7 +3348,7 @@ function renderStatsCliente() {
   container.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Facturación</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Ventas cargadas</div>
         <div style="font-size:20px;font-weight:700;color:var(--accent)">$${Math.round(totalCliente).toLocaleString('es-AR')}</div>
       </div>
       <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">
@@ -3481,16 +3473,13 @@ function parseFecha(str) {
 }
 
 function pedidoEnPeriodo(p) {
-  // Solo contar pedidos Entregados o Archivados como ventas
-  if (p.estado !== 'Cobrado') return false;
-  // Usar fecha del pedido; si no tiene, usar ID (timestamp)
-  let fecha = parseFecha(p.fecha);
-  if (!fecha) {
-    const ts = parseInt(String(p.id).replace('P',''));
-    if (!isNaN(ts)) fecha = new Date(ts);
-  }
-  if (!fecha) return false;
-  return fecha >= statsDesde && fecha <= statsHasta;
+  // Criterio unificado con facturación: fecha de CREACIÓN del pedido (created_at),
+  // sin filtrar por estado. Muestra todo lo que se cargó en el período.
+  const fecStr = p.created_at ? fechaARG(p.created_at) : (p.fecha || '');
+  if (!fecStr) return false;
+  const desde = fechaARG(statsDesde);
+  const hasta = fechaARG(statsHasta);
+  return fecStr >= desde && fecStr <= hasta;
 }
 
 function renderStats() {
@@ -3518,18 +3507,14 @@ function renderStats() {
   const cursor = new Date(statsDesde);
   cursor.setHours(0,0,0,0);
   while (cursor <= statsHasta) {
-    const key = cursor.toISOString().split('T')[0];
+    const key = fechaARG(cursor);
     ventasPorDia[key] = 0;
     cursor.setDate(cursor.getDate() + 1);
   }
   pedidos.forEach(p => {
-    let fecha = parseFecha(p.fecha);
-    if (!fecha) {
-      const ts = parseInt(String(p.id).replace('P',''));
-      if (!isNaN(ts)) fecha = new Date(ts);
-    }
-    if (!fecha) return;
-    const key = fecha.toISOString().split('T')[0];
+    // Agrupar por fecha de creación (misma que usa el filtro pedidoEnPeriodo)
+    const key = p.created_at ? fechaARG(p.created_at) : (p.fecha || '');
+    if (!key) return;
     if (ventasPorDia.hasOwnProperty(key)) {
       ventasPorDia[key] += Number(p.total) || 0;
     }
@@ -3797,7 +3782,10 @@ async function cargarPedidosFacturacion() {
     const selFact = document.getElementById('fact-cliente-filtro');
     if (selFact) {
       const clientesDisp = [...new Set(pedidos
-        .filter(p => p.fecha && (!desde || p.fecha >= desde) && (!hasta || p.fecha <= hasta))
+        .filter(p => {
+          const fc = p.created_at ? fechaARG(p.created_at) : '';
+          return fc && (!desde || fc >= desde) && (!hasta || fc <= hasta);
+        })
         .map(p => p.cliente).filter(Boolean))].sort();
       const valActual = selFact.value;
       selFact.innerHTML = '<option value="">— Todos los clientes —</option>'
@@ -3810,21 +3798,20 @@ async function cargarPedidosFacturacion() {
     // de noche cuente como "hoy" y no como el día siguiente.
     const fechaCreacion = (p) => p.created_at ? fechaARG(p.created_at) : '';
 
-    // Usar fecha de ENTREGA del pedido (p.fecha), para que coincida con el criterio
-    // de estadísticas ("cuánto le vendí a X en el mes" = pedidos con entrega en el mes).
+    // Criterio unificado con estadísticas: fecha de CREACIÓN del pedido.
     // No excluimos por estado: a veces se factura antes de cobrar.
     pedidosFacturacion = pedidos.filter(p => {
-      const fe = p.fecha || '';
-      if (!fe) {
-        // Sin fecha de entrega — mostrar siempre por seguridad
+      const fc = fechaCreacion(p);
+      if (!fc) {
+        // Sin fecha de creación — mostrar siempre por seguridad
         if (clienteFiltro && p.cliente !== clienteFiltro) return false;
         return true;
       }
-      if (desde && fe < desde) return false;
-      if (hasta  && fe > hasta)  return false;
+      if (desde && fc < desde) return false;
+      if (hasta  && fc > hasta)  return false;
       if (clienteFiltro && p.cliente !== clienteFiltro) return false;
       return true;
-    }).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    }).sort((a, b) => fechaCreacion(b).localeCompare(fechaCreacion(a)));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
