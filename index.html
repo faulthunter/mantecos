@@ -859,9 +859,22 @@ canvas { width: 100% !important; }
           </select>
         </div>
       </div>
-      <div id="fact-resumen" style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
-        <span style="font-size:15px;font-weight:700;color:var(--accent)" id="fact-resumen-total">$0</span>
+      <div id="fact-resumen" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:#D1FAE5;border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:10px;color:#065F46;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Facturado</div>
+          <div style="font-size:16px;font-weight:800;color:#065F46;line-height:1.15;margin-top:2px" id="fact-kpi-fact-total">$0</div>
+          <div style="font-size:11px;color:#065F46;opacity:0.75" id="fact-kpi-fact-count">0 pedidos</div>
+        </div>
+        <div style="background:#FEF3C7;border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:10px;color:#92400E;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Sin facturar</div>
+          <div style="font-size:16px;font-weight:800;color:#92400E;line-height:1.15;margin-top:2px" id="fact-kpi-pend-total">$0</div>
+          <div style="font-size:11px;color:#92400E;opacity:0.75" id="fact-kpi-pend-count">0 pedidos</div>
+        </div>
+        <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Total período</div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent);line-height:1.15;margin-top:2px" id="fact-resumen-total">$0</div>
+          <div style="font-size:11px;color:var(--accent);opacity:0.75" id="fact-resumen-count">0 pedidos</div>
+        </div>
       </div>
       <div id="lista-facturacion">
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Seleccioná un período para ver los pedidos.</div>
@@ -3882,11 +3895,19 @@ async function cargarPedidosFacturacion() {
     }).sort((a, b) => fechaCreacion(b).localeCompare(fechaCreacion(a)));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
+    const facturados      = pedidosFacturacion.filter(p => p.facturado);
+    const sinFacturar     = pedidosFacturacion.filter(p => !p.facturado);
+    const totalFacturado  = facturados.reduce((s, p) => s + (Number(p.total) || 0), 0);
+    const totalSinFact    = sinFacturar.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
-    // Resumen
+    // Resumen (3 KPIs)
     const resumen = document.getElementById('fact-resumen');
-    resumen.style.display = 'flex';
-    document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + ' pedidos';
+    resumen.style.display = 'grid';
+    document.getElementById('fact-kpi-fact-total').textContent = '$' + Math.round(totalFacturado).toLocaleString('es-AR');
+    document.getElementById('fact-kpi-fact-count').textContent = facturados.length + (facturados.length === 1 ? ' pedido' : ' pedidos');
+    document.getElementById('fact-kpi-pend-total').textContent = '$' + Math.round(totalSinFact).toLocaleString('es-AR');
+    document.getElementById('fact-kpi-pend-count').textContent = sinFacturar.length + (sinFacturar.length === 1 ? ' pedido' : ' pedidos');
+    document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + (pedidosFacturacion.length === 1 ? ' pedido' : ' pedidos');
     document.getElementById('fact-resumen-total').textContent = '$' + Math.round(total).toLocaleString('es-AR');
 
     if (pedidosFacturacion.length === 0) {
