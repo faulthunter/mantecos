@@ -992,14 +992,13 @@ canvas { width: 100% !important; }
       </div>
       <div class="card"><div class="card-title">Evolución mes a mes<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">últimos 12 meses</span></div><div class="chart-container" style="height:220px"><canvas id="chart-mensual"></canvas></div></div>
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">Facturación</div><div class="kpi-value accent" id="kpi-total">$0</div><div class="kpi-sub" id="kpi-total-sub">—</div></div>
-        <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Facturación</div><div class="kpi-value accent" id="kpi-total">$0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div></div>
         <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" id="kpi-ticket">$0</div><div class="kpi-sub">por pedido</div></div>
         <div class="kpi-card"><div class="kpi-label">Clientes activos</div><div class="kpi-value" id="kpi-clientes">0</div><div class="kpi-sub">en el período</div></div>
       </div>
       <div class="card"><div class="card-title">Ventas por día</div><div class="chart-container" style="height:180px"><canvas id="chart-ventas"></canvas></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div id="ranking-productos"><div class="empty-stats">Sin datos</div></div></div>
-      <div class="card"><div class="card-title">Ventas por producto</div><div class="chart-container" style="height:220px"><canvas id="chart-productos"></canvas></div></div>
       <div class="card"><div class="card-title">Clientes top</div><div id="ranking-clientes"><div class="empty-stats">Sin datos</div></div></div>
       
       <div class="card"><div class="card-title">Actividad por día de semana</div><div class="chart-container" style="height:140px"><canvas id="chart-diasemana"></canvas></div></div>
@@ -3329,7 +3328,6 @@ let chartVentas = null;
 let chartMensual = null;
 let chartEstados = null;
 let chartDiaSemana = null;
-let chartProductos = null;
 let statsInited = false;
 
 function renderStatsCliente() {
@@ -3510,11 +3508,6 @@ function renderStats() {
   document.getElementById('kpi-ticket').textContent   = '$' + Math.round(ticket).toLocaleString('es-AR');
   document.getElementById('kpi-clientes').textContent = clientesUnicos;
 
-  // Subtextos comparativos
-  const diasPeriodo = Math.max(1, Math.round((statsHasta - statsDesde) / 86400000) + 1);
-  document.getElementById('kpi-total-sub').textContent   = '$' + Math.round(total / diasPeriodo).toLocaleString('es-AR') + '/día';
-  document.getElementById('kpi-pedidos-sub').textContent = (total / Math.max(nPedidos,1) > 0 ? (nPedidos / diasPeriodo).toFixed(1) + '/día' : '—');
-
   // ── GRÁFICO VENTAS POR DÍA ───────────────────────────────────
   const ventasPorDia = {};
   // Generar todos los días del período
@@ -3538,6 +3531,7 @@ function renderStats() {
   const values = Object.values(ventasPorDia);
 
   // Etiquetas cortas si hay muchos días
+  const diasPeriodo = Math.max(1, Math.round((statsHasta - statsDesde) / 86400000) + 1);
   const labelsFmt = labels.map(l => {
     const d = new Date(l + 'T12:00:00');
     return diasPeriodo <= 31
@@ -3601,71 +3595,6 @@ function renderStats() {
         <span style="color:var(--accent)">$${Math.round(totalGeneral).toLocaleString('es-AR')}</span>
         <span>${totalUnidades} u.</span>
       </div>`;
-
-  // ── GRÁFICO VENTAS POR PRODUCTO ──────────────────────────────
-  const chartProdLabels = prodRanking.map(([nombre]) => nombre.length > 18 ? nombre.slice(0,16) + '…' : nombre);
-  const chartProdTotales = prodRanking.map(([, d]) => Math.round(d.total));
-  const chartProdUnidades = prodRanking.map(([, d]) => d.cantidad);
-
-  if (chartProductos) chartProductos.destroy();
-  const ctxP = document.getElementById('chart-productos').getContext('2d');
-  chartProductos = new Chart(ctxP, {
-    type: 'bar',
-    data: {
-      labels: chartProdLabels,
-      datasets: [
-        {
-          label: 'Facturación ($)',
-          data: chartProdTotales,
-          backgroundColor: 'rgba(196,105,42,0.75)',
-          borderRadius: 5,
-          borderSkipped: false,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Unidades',
-          data: chartProdUnidades,
-          backgroundColor: 'rgba(196,105,42,0.2)',
-          borderColor: 'rgba(196,105,42,0.6)',
-          borderWidth: 1.5,
-          borderRadius: 5,
-          borderSkipped: false,
-          yAxisID: 'y2',
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: { font: { size: 11 }, boxWidth: 12, padding: 10 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.datasetIndex === 0
-              ? '$' + ctx.raw.toLocaleString('es-AR')
-              : ctx.raw + ' unidades'
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 40 } },
-        y: {
-          position: 'left',
-          grid: { color: '#F0EBE2' },
-          ticks: { font: { size: 10 }, callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) }
-        },
-        y2: {
-          position: 'right',
-          grid: { display: false },
-          ticks: { font: { size: 10 }, stepSize: 1 }
-        }
-      }
-    }
-  });
 
   // ── RANKING CLIENTES ─────────────────────────────────────────
   const cliMap = {};
