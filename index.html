@@ -1236,6 +1236,9 @@ function abrirModulo(modulo) {
     document.getElementById('fact-hasta').value = fechaARG(hoy);
     cargarPedidosFacturacion();
   }
+
+  // Refresh perezoso: si pasaron ≥60s desde el último pull, actualiza los datos del módulo en background
+  refreshModuloSiCorresponde(modulo);
 }
 
 function volverInicio() {
@@ -1277,6 +1280,9 @@ async function refreshAll() {
 
     cacheSet('manteco_clientes', clientes);
     cacheSet('manteco_productos', productos);
+    // Marcar todo como recién refrescado
+    const _now = Date.now();
+    for (const k of Object.keys(ultimoRefresh)) ultimoRefresh[k] = _now;
 
     // Actualizar selector de nuevo pedido
     const sel = document.getElementById('sel-cliente');
@@ -1300,10 +1306,63 @@ async function refreshAll() {
     if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
     // Refrescar facturación si está visible
     if (document.getElementById('page-facturacion')?.classList.contains('active')) cargarPedidosFacturacion();
+    // Refrescar manual: resetear todos los timestamps para no volver a pegarle al backend en los próximos 60s
+    for (const k of Object.keys(ultimoRefresh)) ultimoRefresh[k] = Date.now();
   } catch(e) {
     alert('Error al actualizar: ' + e.message);
   }
   hideLoading();
+}
+
+// ── Refresh perezoso por módulo ──────────────────────────────
+// Al entrar a un módulo, si pasaron >= 60s desde el último refresh, vuelve a bajar
+// los datos que ese módulo necesita. Silencioso: no muestra loader.
+const CACHE_TTL_MS = 60 * 1000; // 60 segundos
+const ultimoRefresh = { pedidos: 0, facturas: 0, clientes: 0, productos: 0, recetario: 0 };
+
+async function refreshModuloSiCorresponde(modulo) {
+  const ahora = Date.now();
+  const stale = (k) => ahora - (ultimoRefresh[k] || 0) >= CACHE_TTL_MS;
+
+  try {
+    if (modulo === 'produccion') {
+      if (stale('pedidos')) {
+        const pedidos = await apiGetPedidos();
+        if (Array.isArray(pedidos)) {
+          todosPedidos = pedidos;
+          actualizarBadges(todosPedidos);
+          if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
+          ultimoRefresh.pedidos = ahora;
+        }
+      }
+    } else if (modulo === 'facturacion') {
+      if (stale('pedidos')) {
+        const pedidos = await apiGetPedidos();
+        if (Array.isArray(pedidos)) { todosPedidos = pedidos; ultimoRefresh.pedidos = ahora; }
+      }
+      // cargarPedidosFacturacion() ya re-consulta facturas emitidas desde la base
+      ultimoRefresh.facturas = ahora;
+    } else if (modulo === 'costeo') {
+      if (stale('recetario')) {
+        // initCosteo() vuelve a cargar ingredientes/recetas/costos fijos igualmente
+        ultimoRefresh.recetario = ahora;
+      }
+    } else if (modulo === 'config') {
+      // Config abre distintas sub-páginas; refrescar clientes y productos si están stale
+      if (stale('clientes') || stale('productos')) {
+        cacheInvalidate('manteco_clientes');
+        cacheInvalidate('manteco_productos');
+        ultimoRefresh.clientes = ahora;
+        ultimoRefresh.productos = ahora;
+      }
+      if (stale('pedidos')) {
+        const pedidos = await apiGetPedidos();
+        if (Array.isArray(pedidos)) { todosPedidos = pedidos; ultimoRefresh.pedidos = ahora; }
+      }
+    }
+  } catch (e) {
+    console.warn('refreshModuloSiCorresponde error:', e.message);
+  }
 }
 
 function toggleConfigMenu() {
