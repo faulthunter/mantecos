@@ -2626,8 +2626,9 @@ function calcularTotalesProduccion(pedidos, filtro) {
       if (n === 'caja palmeritas x20')              t.palmeritas += cant * 20;
       if (n === 'danesa')                           t.danesas += cant;
       if (n === 'caja danesas x20')                 t.danesas += cant * 20;
-      if (n === 'roll de canela')                   t.rolls += cant;
-      if (n === 'caja rolls de canela x20')         t.rolls += cant * 20;
+      if (n === 'roll de canela mayorista')         t.rolls += cant;
+      if (n === 'roll de canela minorista')         t.rolls += cant;
+      if (n === 'caja roll canela x16')             t.rolls += cant * 16;
     });
   });
   return t;
