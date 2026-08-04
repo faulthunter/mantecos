@@ -492,15 +492,15 @@ canvas { width: 100% !important; }
         <div id="clock-fecha" style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;opacity:0.7;margin-bottom:1px"></div>
         <div id="clock-hora" style="font-size:27px;font-weight:700;line-height:1;letter-spacing:0.5px;font-variant-numeric:tabular-nums"></div>
       </div>
-      <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
       <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">↻ Refrescar</button>
+      <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
     </div>
   </div>
 </header>
 
 <!-- Header producción con badges (solo visible en módulo producción) -->
 <div id="header-produccion" style="display:none;background:var(--accent);padding:10px 20px 12px">
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
+  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;row-gap:10px">
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">A producir</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div><div id="badge-medialunas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
@@ -510,12 +510,15 @@ canvas { width: 100% !important; }
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div><div id="badge-panchoco" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div><div id="badge-trenzas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+  </div>
+  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15)">
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div><div id="badge-hojaldres" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div><div id="badge-palmeritas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div><div id="badge-danesas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
+    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Roll de canela</div><div id="badge-rolls" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
   </div>
 </div>
 
@@ -2542,7 +2545,7 @@ function calcularTotalesProduccion(pedidos, filtro) {
   if (filtro === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtro === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
-  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0 };
+  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0, rolls:0 };
   filtrados.forEach(p => {
     (p.items || []).forEach(it => {
       const n = String(it.nombre).toLowerCase().trim();
@@ -2562,6 +2565,8 @@ function calcularTotalesProduccion(pedidos, filtro) {
       if (n === 'caja palmeritas x20')              t.palmeritas += cant * 20;
       if (n === 'danesa')                           t.danesas += cant;
       if (n === 'caja danesas x20')                 t.danesas += cant * 20;
+      if (n === 'roll de canela')                   t.rolls += cant;
+      if (n === 'caja rolls de canela x20')         t.rolls += cant * 20;
     });
   });
   return t;
@@ -2584,6 +2589,7 @@ function actualizarBadges(pedidos) {
   document.getElementById('badge-hojaldres').textContent  = t.hojaldres;
   document.getElementById('badge-palmeritas').textContent = t.palmeritas;
   document.getElementById('badge-danesas').textContent    = t.danesas;
+  document.getElementById('badge-rolls').textContent      = t.rolls;
 
 }
 
