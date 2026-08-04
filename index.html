@@ -492,8 +492,10 @@ canvas { width: 100% !important; }
         <div id="clock-fecha" style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;opacity:0.7;margin-bottom:1px"></div>
         <div id="clock-hora" style="font-size:27px;font-weight:700;line-height:1;letter-spacing:0.5px;font-variant-numeric:tabular-nums"></div>
       </div>
-      <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">↻ Refrescar</button>
-      <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">↻ Refrescar</button>
+        <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">⊞ Menú principal</button>
+      </div>
     </div>
   </div>
 </header>
