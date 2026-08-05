@@ -20,7 +20,7 @@ async function verificarUsuario(req) {
     const u = await r.json();
     const email = (u?.email || '').toLowerCase();
     if (!email || !EMAILS_OK.includes(email)) return null;
-    return email;
+    return { email, token };
   } catch (e) {
     console.error('verificarUsuario error:', e.message);
     return null;
@@ -45,10 +45,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const emailVerificado = await verificarUsuario(req);
-  if (!emailVerificado) {
+  const authResult = await verificarUsuario(req);
+  if (!authResult) {
     return res.status(401).json({ error: 'No autorizado. Iniciá sesión de nuevo.' });
   }
+  const { token: userToken } = authResult;
 
   try {
     const {
@@ -174,7 +175,7 @@ export default async function handler(req, res) {
       const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/facturas/${fileName}`, {
         method: 'POST',
         headers: {
-          'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`,
+          'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/pdf', 'x-upsert': 'true',
         },
         body: pdfBytes
@@ -189,7 +190,7 @@ export default async function handler(req, res) {
       await fetch(`${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}`, {
         method: 'PATCH',
         headers: {
-          'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`,
+          'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json', 'Prefer': 'return=minimal'
         },
         body: JSON.stringify({ pdf_url: pdfUrlFinal })
