@@ -492,17 +492,15 @@ canvas { width: 100% !important; }
         <div id="clock-fecha" style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;opacity:0.7;margin-bottom:1px"></div>
         <div id="clock-hora" style="font-size:27px;font-weight:700;line-height:1;letter-spacing:0.5px;font-variant-numeric:tabular-nums"></div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">↻ Refrescar</button>
-        <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">⊞ Menú principal</button>
-      </div>
+      <button onclick="volverInicio()" style="padding:6px 12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">⊞ Menú principal</button>
+      <button onclick="refreshAll()" title="Actualizar todo (pedidos, clientes, productos)" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:20px;color:white;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">↻ Refrescar</button>
     </div>
   </div>
 </header>
 
 <!-- Header producción con badges (solo visible en módulo producción) -->
 <div id="header-produccion" style="display:none;background:var(--accent);padding:10px 20px 12px">
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;row-gap:10px">
+  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px">
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">A producir</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div><div id="badge-medialunas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
@@ -512,15 +510,12 @@ canvas { width: 100% !important; }
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div><div id="badge-panchoco" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div><div id="badge-trenzas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-  </div>
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15)">
+    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div><div id="badge-hojaldres" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div><div id="badge-palmeritas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
     <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
     <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div><div id="badge-danesas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Roll de canela</div><div id="badge-rolls" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
   </div>
 </div>
 
@@ -864,22 +859,9 @@ canvas { width: 100% !important; }
           </select>
         </div>
       </div>
-      <div id="fact-resumen" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div style="background:#D1FAE5;border-radius:var(--radius-sm);padding:10px 12px">
-          <div style="font-size:10px;color:#065F46;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Facturado</div>
-          <div style="font-size:16px;font-weight:800;color:#065F46;line-height:1.15;margin-top:2px" id="fact-kpi-fact-total">$0</div>
-          <div style="font-size:11px;color:#065F46;opacity:0.75" id="fact-kpi-fact-count">0 pedidos</div>
-        </div>
-        <div style="background:#FEF3C7;border-radius:var(--radius-sm);padding:10px 12px">
-          <div style="font-size:10px;color:#92400E;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Sin facturar</div>
-          <div style="font-size:16px;font-weight:800;color:#92400E;line-height:1.15;margin-top:2px" id="fact-kpi-pend-total">$0</div>
-          <div style="font-size:11px;color:#92400E;opacity:0.75" id="fact-kpi-pend-count">0 pedidos</div>
-        </div>
-        <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 12px">
-          <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Total período</div>
-          <div style="font-size:16px;font-weight:800;color:var(--accent);line-height:1.15;margin-top:2px" id="fact-resumen-total">$0</div>
-          <div style="font-size:11px;color:var(--accent);opacity:0.75" id="fact-resumen-count">0 pedidos</div>
-        </div>
+      <div id="fact-resumen" style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:none;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--muted)" id="fact-resumen-count">0 pedidos</span>
+        <span style="font-size:15px;font-weight:700;color:var(--accent)" id="fact-resumen-total">$0</span>
       </div>
       <div id="lista-facturacion">
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Seleccioná un período para ver los pedidos.</div>
@@ -995,16 +977,16 @@ canvas { width: 100% !important; }
         <button class="btn-primary" id="btn-aplicar-stats" onclick="aplicarFiltroStats()" style="margin-top:10px;padding:10px 16px;font-size:14px">Aplicar filtro</button>
         <div style="font-size:12px;color:var(--muted)" id="stats-period-label">Últimos 7 días</div>
       </div>
-      <div class="card"><div class="card-title">Evolución mes a mes<span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">últimos 12 meses</span></div><div class="chart-container" style="height:220px"><canvas id="chart-mensual"></canvas></div></div>
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">Facturación</div><div class="kpi-value accent" id="kpi-total">$0</div></div>
-        <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Facturación</div><div class="kpi-value accent" id="kpi-total">$0</div><div class="kpi-sub" id="kpi-total-sub">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pedidos</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" id="kpi-ticket">$0</div><div class="kpi-sub">por pedido</div></div>
         <div class="kpi-card"><div class="kpi-label">Clientes activos</div><div class="kpi-value" id="kpi-clientes">0</div><div class="kpi-sub">en el período</div></div>
       </div>
       <div class="card"><div class="card-title">Ventas por día</div><div class="chart-container" style="height:180px"><canvas id="chart-ventas"></canvas></div></div>
       <div class="card"><div class="card-title">Ventas por producto</div><div id="ranking-productos"><div class="empty-stats">Sin datos</div></div></div>
-      <div class="card"><div class="card-title">Ranking de clientes</div><div id="ranking-clientes" style="max-height:480px;overflow-y:auto"><div class="empty-stats">Sin datos</div></div></div>
+      <div class="card"><div class="card-title">Ventas por producto</div><div class="chart-container" style="height:220px"><canvas id="chart-productos"></canvas></div></div>
+      <div class="card"><div class="card-title">Clientes top</div><div id="ranking-clientes"><div class="empty-stats">Sin datos</div></div></div>
       
       <div class="card"><div class="card-title">Actividad por día de semana</div><div class="chart-container" style="height:140px"><canvas id="chart-diasemana"></canvas></div></div>
 
@@ -1087,28 +1069,34 @@ const supabaseAuth = supabase.createClient(SUPA_URL, SUPA_KEY, {
 });
 
 const supa = {
-  headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+  // Siempre obtiene el JWT real de la sesión activa.
+  // Nunca usa el anon key como Bearer — eso impediría que RLS distinga usuarios autenticados.
+  async _h(extra) {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    const token = session?.access_token || SUPA_KEY;
+    return { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...extra };
+  },
 
   async get(table, query = '') {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers: this.headers });
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers: await this._h() });
     if (!r.ok) throw new Error(`Supabase GET ${table} falló (${r.status}): ${await r.text()}`);
     return r.json();
   },
 
   async post(table, body) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: this.headers, body: JSON.stringify(body) });
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: await this._h(), body: JSON.stringify(body) });
     if (!r.ok) throw new Error(`Supabase POST ${table} falló (${r.status}): ${await r.text()}`);
     return r.json();
   },
 
   async patch(table, query, body) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: this.headers, body: JSON.stringify(body) });
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: await this._h(), body: JSON.stringify(body) });
     if (!r.ok) throw new Error(`Supabase PATCH ${table} falló (${r.status}): ${await r.text()}`);
     return r.json();
   },
 
   async delete(table, query) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: { ...this.headers, 'Prefer': 'return=minimal' } });
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: await this._h({ 'Prefer': 'return=minimal' }) });
     if (!r.ok) throw new Error(`Supabase DELETE ${table} falló (${r.status}): ${await r.text()}`);
     return r.ok;
   }
@@ -1236,9 +1224,6 @@ function abrirModulo(modulo) {
     document.getElementById('fact-hasta').value = fechaARG(hoy);
     cargarPedidosFacturacion();
   }
-
-  // Refresh perezoso: si pasaron ≥60s desde el último pull, actualiza los datos del módulo en background
-  refreshModuloSiCorresponde(modulo);
 }
 
 function volverInicio() {
@@ -1280,9 +1265,6 @@ async function refreshAll() {
 
     cacheSet('manteco_clientes', clientes);
     cacheSet('manteco_productos', productos);
-    // Marcar todo como recién refrescado
-    const _now = Date.now();
-    for (const k of Object.keys(ultimoRefresh)) ultimoRefresh[k] = _now;
 
     // Actualizar selector de nuevo pedido
     const sel = document.getElementById('sel-cliente');
@@ -1306,63 +1288,10 @@ async function refreshAll() {
     if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
     // Refrescar facturación si está visible
     if (document.getElementById('page-facturacion')?.classList.contains('active')) cargarPedidosFacturacion();
-    // Refrescar manual: resetear todos los timestamps para no volver a pegarle al backend en los próximos 60s
-    for (const k of Object.keys(ultimoRefresh)) ultimoRefresh[k] = Date.now();
   } catch(e) {
     alert('Error al actualizar: ' + e.message);
   }
   hideLoading();
-}
-
-// ── Refresh perezoso por módulo ──────────────────────────────
-// Al entrar a un módulo, si pasaron >= 60s desde el último refresh, vuelve a bajar
-// los datos que ese módulo necesita. Silencioso: no muestra loader.
-const CACHE_TTL_MS = 60 * 1000; // 60 segundos
-const ultimoRefresh = { pedidos: 0, facturas: 0, clientes: 0, productos: 0, recetario: 0 };
-
-async function refreshModuloSiCorresponde(modulo) {
-  const ahora = Date.now();
-  const stale = (k) => ahora - (ultimoRefresh[k] || 0) >= CACHE_TTL_MS;
-
-  try {
-    if (modulo === 'produccion') {
-      if (stale('pedidos')) {
-        const pedidos = await apiGetPedidos();
-        if (Array.isArray(pedidos)) {
-          todosPedidos = pedidos;
-          actualizarBadges(todosPedidos);
-          if (document.getElementById('page-kanban')?.classList.contains('active')) filtrarKanban();
-          ultimoRefresh.pedidos = ahora;
-        }
-      }
-    } else if (modulo === 'facturacion') {
-      if (stale('pedidos')) {
-        const pedidos = await apiGetPedidos();
-        if (Array.isArray(pedidos)) { todosPedidos = pedidos; ultimoRefresh.pedidos = ahora; }
-      }
-      // cargarPedidosFacturacion() ya re-consulta facturas emitidas desde la base
-      ultimoRefresh.facturas = ahora;
-    } else if (modulo === 'costeo') {
-      if (stale('recetario')) {
-        // initCosteo() vuelve a cargar ingredientes/recetas/costos fijos igualmente
-        ultimoRefresh.recetario = ahora;
-      }
-    } else if (modulo === 'config') {
-      // Config abre distintas sub-páginas; refrescar clientes y productos si están stale
-      if (stale('clientes') || stale('productos')) {
-        cacheInvalidate('manteco_clientes');
-        cacheInvalidate('manteco_productos');
-        ultimoRefresh.clientes = ahora;
-        ultimoRefresh.productos = ahora;
-      }
-      if (stale('pedidos')) {
-        const pedidos = await apiGetPedidos();
-        if (Array.isArray(pedidos)) { todosPedidos = pedidos; ultimoRefresh.pedidos = ahora; }
-      }
-    }
-  } catch (e) {
-    console.warn('refreshModuloSiCorresponde error:', e.message);
-  }
 }
 
 function toggleConfigMenu() {
@@ -1710,13 +1639,7 @@ async function apiNuevoPedido(cliente, fecha, estado, observaciones, items, envi
 }
 
 async function apiActualizarEstado(id, estado) {
-  const patch = { estado };
-  // Al pasar a "Entregado por cobrar", registrar la fecha real de entrega
-  if (estado === 'Entregado') patch.fecha_entregado = fechaARG();
-  await supa.patch('pedidos', `id=eq.${id}`, patch);
-  // Actualizar cache local
-  const p = todosPedidos.find(x => x.id === id);
-  if (p && estado === 'Entregado') p.fecha_entregado = patch.fecha_entregado;
+  await supa.patch('pedidos', `id=eq.${id}`, { estado });
   return { ok: true };
 }
 
@@ -1729,16 +1652,9 @@ async function apiEliminarPedido(id) {
 async function apiEditarPedido(id, cliente, fecha, estado, observaciones, items, envio, iva) {
   const base  = items.reduce((s, i) => s + parseFloat(i.precio) * parseInt(i.cantidad), 0) + (envio || 0);
   const total = iva ? Math.round(base * 1.21) : base;
-  const patch = { cliente, fecha, estado, observaciones, total, envio: envio || 0 };
-  // Si el estado nuevo es "Entregado" y el pedido no tenía fecha_entregado aún, la registramos
-  const pActual = todosPedidos.find(x => x.id === id);
-  if (estado === 'Entregado' && pActual && !pActual.fecha_entregado) {
-    patch.fecha_entregado = fechaARG();
-  }
-  await supa.patch('pedidos', `id=eq.${id}`, patch);
+  await supa.patch('pedidos', `id=eq.${id}`, { cliente, fecha, estado, observaciones, total, envio: envio || 0 });
   await supa.delete('items_pedido', `pedido_id=eq.${id}`);
   if (items.length > 0) await Promise.all(items.map(it => supa.post('items_pedido', { pedido_id: id, nombre: it.nombre, cantidad: parseInt(it.cantidad), precio: parseFloat(it.precio) })));
-  if (patch.fecha_entregado && pActual) pActual.fecha_entregado = patch.fecha_entregado;
   return { ok: true, total };
 }
 
@@ -2578,7 +2494,7 @@ function pedidoListaHTML(p) {
     <div class="lista-pedido-row">
       <div style="flex:1;min-width:0">
         <div class="lista-cliente">${p.cliente}</div>
-        <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
+        <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}</div>
       </div>
       <div class="lista-total">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
       <div class="lista-acciones">
@@ -2606,7 +2522,7 @@ function calcularTotalesProduccion(pedidos, filtro) {
   if (filtro === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtro === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
-  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0, rolls:0 };
+  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0 };
   filtrados.forEach(p => {
     (p.items || []).forEach(it => {
       const n = String(it.nombre).toLowerCase().trim();
@@ -2626,9 +2542,6 @@ function calcularTotalesProduccion(pedidos, filtro) {
       if (n === 'caja palmeritas x20')              t.palmeritas += cant * 20;
       if (n === 'danesa')                           t.danesas += cant;
       if (n === 'caja danesas x20')                 t.danesas += cant * 20;
-      if (n === 'roll de canela mayorista')         t.rolls += cant;
-      if (n === 'roll de canela minorista')         t.rolls += cant;
-      if (n === 'caja roll canela x16')             t.rolls += cant * 16;
     });
   });
   return t;
@@ -2651,7 +2564,6 @@ function actualizarBadges(pedidos) {
   document.getElementById('badge-hojaldres').textContent  = t.hojaldres;
   document.getElementById('badge-palmeritas').textContent = t.palmeritas;
   document.getElementById('badge-danesas').textContent    = t.danesas;
-  document.getElementById('badge-rolls').textContent      = t.rolls;
 
 }
 
@@ -2699,24 +2611,6 @@ function esPedidoVencido(p) {
   const fecha = new Date(p.fecha + 'T12:00:00');
   const { lunes } = getLunesYSabado(0);
   return fecha < lunes;
-}
-
-// Días desde que se entregó el pedido (para pedidos Entregado por cobrar).
-// Usa fecha_entregado (fecha real de entrega, guardada al mover al estado); si no está
-// (pedidos históricos), cae a la fecha de entrega prevista.
-function chipDiasEntregado(p) {
-  if (p.estado !== 'Entregado') return '';
-  const base = p.fecha_entregado || p.fecha;
-  if (!base) return '';
-  const hoy      = new Date(fechaARG() + 'T12:00:00');
-  const entrega  = new Date(base + 'T12:00:00');
-  const dias = Math.floor((hoy - entrega) / 86400000);
-  if (dias < 0) return ''; // entrega futura, no aplica
-  let bg = '#F1F5F9', fg = '#475569'; // gris: recién entregado
-  if (dias >= 3 && dias <= 7) { bg = '#FEF3C7'; fg = '#92400E'; } // amarillo
-  if (dias >= 8)              { bg = '#FEE2E2'; fg = '#B91C1C'; } // rojo
-  const txt = dias === 0 ? 'Hoy' : (dias === 1 ? 'Hace 1 día' : `Hace ${dias} días`);
-  return ` <span style="background:${bg};color:${fg};font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">⏱ ${txt}</span>`;
 }
 
 function pedidoEnSemana(p, offsetSemanas) {
@@ -2804,7 +2698,7 @@ function pedidoCardHTML(p) {
       <div class="pedido-card-top">
         <div>
           <h3>${p.cliente}</h3>
-          <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
+          <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}</div>
           ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
           <div class="envio-wrap">
             <span class="items-toggle" onclick="toggleEnvioEdit('${p.id}', this)">🚚 Envío: $${Math.round(p.envio || 0).toLocaleString('es-AR')} ▸</span>
@@ -3393,9 +3287,9 @@ let statsPeriod = '7d';
 let statsDesde = null;
 let statsHasta = null;
 let chartVentas = null;
-let chartMensual = null;
 let chartEstados = null;
 let chartDiaSemana = null;
+let chartProductos = null;
 let statsInited = false;
 
 function renderStatsCliente() {
@@ -3403,10 +3297,18 @@ function renderStatsCliente() {
   const container  = document.getElementById('stats-cliente-result');
   if (!clienteSel) { container.innerHTML = ''; return; }
 
-  // Filtrar todos los pedidos del cliente cargados en el período (mismo criterio que renderStats)
+  // Filtrar pedidos cobrados del cliente en el período actual
   const pedidosCliente = statsAllPedidos.filter(p => {
+    if (!['Cobrado', 'Entregado', 'Archivado'].includes(p.estado)) return false;
     if (p.cliente !== clienteSel) return false;
-    return pedidoEnPeriodo(p);
+    // Filtrar por período sin restricción de estado
+    let fecha = p.fecha ? new Date(p.fecha + 'T12:00:00') : null;
+    if (!fecha) {
+      const ts = parseInt(String(p.id).replace('P',''));
+      if (!isNaN(ts)) fecha = new Date(ts);
+    }
+    if (!fecha) return true;
+    return fecha >= statsDesde && fecha <= statsHasta;
   });
 
   if (pedidosCliente.length === 0) {
@@ -3554,12 +3456,16 @@ function parseFecha(str) {
 }
 
 function pedidoEnPeriodo(p) {
-  // Criterio unificado con facturación: fecha de ENTREGA del pedido (p.fecha),
-  // sin filtrar por estado. Muestra todo lo que se entrega en el período.
-  if (!p.fecha) return false;
-  const desde = fechaARG(statsDesde);
-  const hasta = fechaARG(statsHasta);
-  return p.fecha >= desde && p.fecha <= hasta;
+  // Solo contar pedidos Entregados o Archivados como ventas
+  if (p.estado !== 'Cobrado') return false;
+  // Usar fecha del pedido; si no tiene, usar ID (timestamp)
+  let fecha = parseFecha(p.fecha);
+  if (!fecha) {
+    const ts = parseInt(String(p.id).replace('P',''));
+    if (!isNaN(ts)) fecha = new Date(ts);
+  }
+  if (!fecha) return false;
+  return fecha >= statsDesde && fecha <= statsHasta;
 }
 
 function renderStats() {
@@ -3576,20 +3482,29 @@ function renderStats() {
   document.getElementById('kpi-ticket').textContent   = '$' + Math.round(ticket).toLocaleString('es-AR');
   document.getElementById('kpi-clientes').textContent = clientesUnicos;
 
+  // Subtextos comparativos
+  const diasPeriodo = Math.max(1, Math.round((statsHasta - statsDesde) / 86400000) + 1);
+  document.getElementById('kpi-total-sub').textContent   = '$' + Math.round(total / diasPeriodo).toLocaleString('es-AR') + '/día';
+  document.getElementById('kpi-pedidos-sub').textContent = (total / Math.max(nPedidos,1) > 0 ? (nPedidos / diasPeriodo).toFixed(1) + '/día' : '—');
+
   // ── GRÁFICO VENTAS POR DÍA ───────────────────────────────────
   const ventasPorDia = {};
   // Generar todos los días del período
   const cursor = new Date(statsDesde);
   cursor.setHours(0,0,0,0);
   while (cursor <= statsHasta) {
-    const key = fechaARG(cursor);
+    const key = cursor.toISOString().split('T')[0];
     ventasPorDia[key] = 0;
     cursor.setDate(cursor.getDate() + 1);
   }
   pedidos.forEach(p => {
-    // Agrupar por fecha de entrega (misma que usa el filtro pedidoEnPeriodo)
-    const key = p.fecha || '';
-    if (!key) return;
+    let fecha = parseFecha(p.fecha);
+    if (!fecha) {
+      const ts = parseInt(String(p.id).replace('P',''));
+      if (!isNaN(ts)) fecha = new Date(ts);
+    }
+    if (!fecha) return;
+    const key = fecha.toISOString().split('T')[0];
     if (ventasPorDia.hasOwnProperty(key)) {
       ventasPorDia[key] += Number(p.total) || 0;
     }
@@ -3599,7 +3514,6 @@ function renderStats() {
   const values = Object.values(ventasPorDia);
 
   // Etiquetas cortas si hay muchos días
-  const diasPeriodo = Math.max(1, Math.round((statsHasta - statsDesde) / 86400000) + 1);
   const labelsFmt = labels.map(l => {
     const d = new Date(l + 'T12:00:00');
     return diasPeriodo <= 31
@@ -3664,6 +3578,71 @@ function renderStats() {
         <span>${totalUnidades} u.</span>
       </div>`;
 
+  // ── GRÁFICO VENTAS POR PRODUCTO ──────────────────────────────
+  const chartProdLabels = prodRanking.map(([nombre]) => nombre.length > 18 ? nombre.slice(0,16) + '…' : nombre);
+  const chartProdTotales = prodRanking.map(([, d]) => Math.round(d.total));
+  const chartProdUnidades = prodRanking.map(([, d]) => d.cantidad);
+
+  if (chartProductos) chartProductos.destroy();
+  const ctxP = document.getElementById('chart-productos').getContext('2d');
+  chartProductos = new Chart(ctxP, {
+    type: 'bar',
+    data: {
+      labels: chartProdLabels,
+      datasets: [
+        {
+          label: 'Facturación ($)',
+          data: chartProdTotales,
+          backgroundColor: 'rgba(196,105,42,0.75)',
+          borderRadius: 5,
+          borderSkipped: false,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Unidades',
+          data: chartProdUnidades,
+          backgroundColor: 'rgba(196,105,42,0.2)',
+          borderColor: 'rgba(196,105,42,0.6)',
+          borderWidth: 1.5,
+          borderRadius: 5,
+          borderSkipped: false,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { size: 11 }, boxWidth: 12, padding: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? '$' + ctx.raw.toLocaleString('es-AR')
+              : ctx.raw + ' unidades'
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 40 } },
+        y: {
+          position: 'left',
+          grid: { color: '#F0EBE2' },
+          ticks: { font: { size: 10 }, callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) }
+        },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { font: { size: 10 }, stepSize: 1 }
+        }
+      }
+    }
+  });
+
   // ── RANKING CLIENTES ─────────────────────────────────────────
   const cliMap = {};
   pedidos.forEach(p => {
@@ -3673,7 +3652,7 @@ function renderStats() {
     cliMap[k].total   += Number(p.total) || 0;
     cliMap[k].pedidos += 1;
   });
-  const cliRanking = Object.entries(cliMap).sort((a,b) => b[1].total - a[1].total);
+  const cliRanking = Object.entries(cliMap).sort((a,b) => b[1].total - a[1].total).slice(0, 8);
   const maxCli = cliRanking.length > 0 ? cliRanking[0][1].total : 1;
 
   document.getElementById('ranking-clientes').innerHTML = cliRanking.length === 0
@@ -3731,71 +3710,6 @@ function renderStats() {
       }
     }
   });
-
-  renderEvolucionMensual();
-}
-
-// Gráfico de evolución mensual (últimos 12 meses, independiente del filtro de período).
-// Suma pedidos por mes según created_at en horario Argentina.
-function renderEvolucionMensual() {
-  const canvas = document.getElementById('chart-mensual');
-  if (!canvas) return;
-
-  const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const hoy = new Date();
-  // Generar buckets de los últimos 12 meses (más viejo -> más nuevo)
-  const buckets = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    buckets.push({ key, label: MESES[d.getMonth()] + (d.getMonth() === 0 || i === 11 ? " '" + String(d.getFullYear()).slice(-2) : ''), total: 0, count: 0 });
-  }
-  const byKey = Object.fromEntries(buckets.map(b => [b.key, b]));
-
-  (statsAllPedidos || []).forEach(p => {
-    if (!p.fecha) return;
-    const key = p.fecha.slice(0, 7);               // "YYYY-MM" (fecha de entrega)
-    if (byKey[key]) {
-      byKey[key].total += Number(p.total) || 0;
-      byKey[key].count += 1;
-    }
-  });
-
-  const labels = buckets.map(b => b.label);
-  const values = buckets.map(b => Math.round(b.total));
-  const counts = buckets.map(b => b.count);
-
-  if (chartMensual) chartMensual.destroy();
-  const ctx = canvas.getContext('2d');
-  chartMensual = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: values.map((_, i) => i === values.length - 1 ? 'rgba(196,105,42,0.95)' : 'rgba(196,105,42,0.55)'),
-        borderRadius: 5,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: ctx => ctx[0].label,
-            label: ctx => '$' + Math.round(ctx.raw).toLocaleString('es-AR') + ' · ' + counts[ctx.dataIndex] + ' pedidos'
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-        y: { grid: { color: '#F0EBE2' }, ticks: { font: { size: 10 }, callback: v => '$' + (v >= 1000000 ? (v/1000000).toFixed(1) + 'M' : v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) } }
-      }
-    }
-  });
 }
 
 // ── FACTURACIÓN ───────────────────────────────────────────────
@@ -3839,7 +3753,7 @@ async function cargarPedidosFacturacion() {
     // Traer facturas emitidas de Supabase para marcar pedidos ya facturados
     try {
       const facturasRes = await fetch(SUPA_URL + '/rest/v1/facturas?select=pedido_id,cae,nro,tipo', {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+        headers: await supa._h()
       });
       if (facturasRes.ok) {
         const facturasDB = await facturasRes.json();
@@ -3871,11 +3785,13 @@ async function cargarPedidosFacturacion() {
     // de noche cuente como "hoy" y no como el día siguiente.
     const fechaCreacion = (p) => p.created_at ? fechaARG(p.created_at) : '';
 
-    // Criterio unificado con estadísticas: fecha de ENTREGA del pedido (p.fecha).
+    // Usar fecha de ENTREGA del pedido (p.fecha), para que coincida con el criterio
+    // de estadísticas ("cuánto le vendí a X en el mes" = pedidos con entrega en el mes).
     // No excluimos por estado: a veces se factura antes de cobrar.
     pedidosFacturacion = pedidos.filter(p => {
       const fe = p.fecha || '';
       if (!fe) {
+        // Sin fecha de entrega — mostrar siempre por seguridad
         if (clienteFiltro && p.cliente !== clienteFiltro) return false;
         return true;
       }
@@ -3886,19 +3802,11 @@ async function cargarPedidosFacturacion() {
     }).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
-    const facturados      = pedidosFacturacion.filter(p => p.facturado);
-    const sinFacturar     = pedidosFacturacion.filter(p => !p.facturado);
-    const totalFacturado  = facturados.reduce((s, p) => s + (Number(p.total) || 0), 0);
-    const totalSinFact    = sinFacturar.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
-    // Resumen (3 KPIs)
+    // Resumen
     const resumen = document.getElementById('fact-resumen');
-    resumen.style.display = 'grid';
-    document.getElementById('fact-kpi-fact-total').textContent = '$' + Math.round(totalFacturado).toLocaleString('es-AR');
-    document.getElementById('fact-kpi-fact-count').textContent = facturados.length + (facturados.length === 1 ? ' pedido' : ' pedidos');
-    document.getElementById('fact-kpi-pend-total').textContent = '$' + Math.round(totalSinFact).toLocaleString('es-AR');
-    document.getElementById('fact-kpi-pend-count').textContent = sinFacturar.length + (sinFacturar.length === 1 ? ' pedido' : ' pedidos');
-    document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + (pedidosFacturacion.length === 1 ? ' pedido' : ' pedidos');
+    resumen.style.display = 'flex';
+    document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + ' pedidos';
     document.getElementById('fact-resumen-total').textContent = '$' + Math.round(total).toLocaleString('es-AR');
 
     if (pedidosFacturacion.length === 0) {
@@ -4185,7 +4093,7 @@ async function cargarHistorialFacturas() {
     if (hasta)    url += '&fecha_emision=lte.' + hasta;
     if (clienteF) url += '&cliente=eq.' + encodeURIComponent(clienteF);
 
-    const res = await fetch(url, { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } });
+    const res = await fetch(url, { headers: await supa._h() });
     const facturas = await res.json();
 
     // Poblar selector de clientes con los que tienen facturas (solo primera carga sin filtro)
@@ -4194,7 +4102,7 @@ async function cargarHistorialFacturas() {
       // Traer todos para poblar el selector
       const allRes = await fetch(
         SUPA_URL + '/rest/v1/facturas?select=cliente&order=cliente.asc',
-        { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+        { headers: await supa._h() }
       );
       if (allRes.ok) {
         const allF = await allRes.json();
