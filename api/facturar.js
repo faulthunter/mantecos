@@ -9,8 +9,11 @@ const ALLOWED_ORIGINS = ['https://mantecos.vercel.app'];
 const SUPA_URL  = 'https://zuuvvhhpcdngvauonxms.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1dXZ2aGhwY2RuZ3ZhdW9ueG1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTA0MjYsImV4cCI6MjA5NTk4NjQyNn0.sYbXyOTmN8qDraFLgk0ifiPU3NHr0Ezb3PaqrTywFxQ';
 
-// Verifica el access_token contra Supabase Auth. Devuelve el email verificado
-// o null si el token es inválido/expirado o el email no está en la whitelist.
+// Verifica el access_token contra Supabase Auth.
+// Devuelve { email, token } si el usuario es válido y está en la whitelist,
+// o null si el token es inválido/expirado o el email no está autorizado.
+// El token devuelto se usa para operaciones a Supabase DB/Storage, de modo que
+// las policies RLS vean role = 'authenticated' en lugar de 'anon'.
 async function verificarUsuario(req) {
   const auth = req.headers['authorization'] || req.headers['Authorization'] || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
@@ -23,7 +26,7 @@ async function verificarUsuario(req) {
     const u = await r.json();
     const email = (u?.email || '').toLowerCase();
     if (!email || !EMAILS_OK.includes(email)) return null;
-    return email;
+    return { email, token };
   } catch (e) {
     console.error('verificarUsuario error:', e.message);
     return null;
@@ -45,10 +48,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // Autenticación real: verificar token contra Supabase Auth
-  const emailVerificado = await verificarUsuario(req);
-  if (!emailVerificado) {
+  const authResult = await verificarUsuario(req);
+  if (!authResult) {
     return res.status(401).json({ error: 'No autorizado. Iniciá sesión de nuevo.' });
   }
+  const { email: emailVerificado, token: userToken } = authResult;
 
   try {
     const { tipo, cuitCliente, condicionIva, impTotal, envio: envioRaw, conIva, items: pedidoItems } = req.body;
@@ -60,7 +64,7 @@ export default async function handler(req, res) {
       try {
         const dupRes = await fetch(
           `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
-          { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` } }
+          { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}` } }
         );
         if (dupRes.ok) {
           const existing = await dupRes.json();
@@ -318,7 +322,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: {
           'apikey': SUPA_ANON,
-          'Authorization': `Bearer ${SUPA_ANON}`,
+          'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
@@ -351,7 +355,7 @@ export default async function handler(req, res) {
               method: 'POST',
               headers: {
                 'apikey':        SUPA_ANON,
-                'Authorization': `Bearer ${SUPA_ANON}`,
+                'Authorization': `Bearer ${userToken}`,
                 'Content-Type':  'application/pdf',
                 'x-upsert':      'true',
               },
@@ -380,7 +384,7 @@ export default async function handler(req, res) {
               method: 'PATCH',
               headers: {
                 'apikey':        SUPA_ANON,
-                'Authorization': `Bearer ${SUPA_ANON}`,
+                'Authorization': `Bearer ${userToken}`,
                 'Content-Type':  'application/json',
                 'Prefer':        'return=minimal'
               },
