@@ -2607,9 +2607,9 @@ function pedidoListaHTML(p) {
   const prev = idx > 0 ? ESTADOS[idx - 1] : null;
   const next = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
   return `
-    <div class="lista-pedido-row">
+    <div class="lista-pedido-row" style="${p.no_contabilizar ? 'opacity:0.62' : ''}">
       <div style="flex:1;min-width:0">
-        <div class="lista-cliente">${p.cliente}</div>
+        <div class="lista-cliente">${p.cliente}${p.no_contabilizar ? ' <span style="background:#E5E7EB;color:#4B5563;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700">SIN CONTAR</span>' : ''}</div>
         <div class="lista-fecha">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'}${esPedidoVencido(p) ? ' <span style="color:var(--error);font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
       </div>
       <div class="lista-total">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
@@ -2634,7 +2634,7 @@ function toggleCol(header) {
 
 // Calcula los totales de unidades pedidas por categoría (Nuevo + Producción)
 function calcularTotalesProduccion(pedidos, filtro) {
-  let filtrados = pedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
+  let filtrados = pedidos.filter(p => (p.estado === 'Nuevo' || p.estado === 'Producción') && !p.no_contabilizar);
   if (filtro === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtro === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
@@ -2667,8 +2667,8 @@ function calcularTotalesProduccion(pedidos, filtro) {
 }
 
 function actualizarBadges(pedidos) {
-  // Aplicar el mismo filtro de semana activo para contar "Nuevos"
-  let filtrados = pedidos.filter(p => p.estado === 'Nuevo' || p.estado === 'Producción');
+  // Aplicar el mismo filtro de semana activo para contar "A producir"; excluir no_contabilizar
+  let filtrados = pedidos.filter(p => (p.estado === 'Nuevo' || p.estado === 'Producción') && !p.no_contabilizar);
   if (filtroSemana === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtroSemana === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
@@ -2975,10 +2975,10 @@ function pedidoCardHTML(p) {
   }
 
   return `
-    <div class="pedido-card" id="card-${p.id}">
+    <div class="pedido-card" id="card-${p.id}" style="${p.no_contabilizar ? 'opacity:0.62;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(0,0,0,0.02) 8px,rgba(0,0,0,0.02) 16px)' : ''}">
       <div class="pedido-card-top">
         <div>
-          <h3>${p.cliente}</h3>
+          <h3>${p.cliente}${p.no_contabilizar ? ' <span style="background:#E5E7EB;color:#4B5563;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">SIN CONTAR</span>' : ''}</h3>
           <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
           ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
           <div class="envio-wrap">
@@ -3000,8 +3000,27 @@ function pedidoCardHTML(p) {
         <button class="action-btn partial"  onclick="abrirParcial('${p.id}')">📦 Parcial</button>
         <button class="action-btn delete"   onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none">
+        <input type="checkbox" ${p.no_contabilizar ? 'checked' : ''} onchange="toggleNoContabilizar('${p.id}', this.checked)" style="cursor:pointer;margin:0" />
+        No contabilizar en totales
+      </label>
     </div>
   `;
+}
+
+async function toggleNoContabilizar(id, checked) {
+  const p = todosPedidos.find(x => x.id === id);
+  if (!p) return;
+  p.no_contabilizar = !!checked;
+  try {
+    await supa.patch('pedidos', 'id=eq.' + id, { no_contabilizar: !!checked });
+    actualizarBadges(todosPedidos);
+    filtrarKanban();
+  } catch (e) {
+    p.no_contabilizar = !checked;
+    alert('No se pudo actualizar: ' + e.message);
+    filtrarKanban();
+  }
 }
 
 function toggleItems(id, btn) {
