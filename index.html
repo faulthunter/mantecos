@@ -3995,6 +3995,17 @@ function renderEvolucionMensual() {
 // ── FACTURACIÓN ───────────────────────────────────────────────
 let pedidosFacturacion = [];
 
+// Escapa HTML para prevenir XSS al renderizar texto de usuario
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Devuelve YYYY-MM-DD en horario de Argentina (desde un Date, un timestamp ISO, o ahora)
 function fechaARG(input) {
   const d = input ? new Date(input) : new Date();
