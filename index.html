@@ -559,6 +559,7 @@ canvas { width: 100% !important; }
 <nav class="nav" id="nav-produccion" style="display:none">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
+  <button class="nav-btn"        id="nav-notas"  onclick="showPage('notas'); loadNotas()">📝 Notas</button>
 </nav>
 
 <nav class="nav" id="nav-costeo-tabs" style="display:none">
@@ -685,6 +686,33 @@ canvas { width: 100% !important; }
       <div class="kanban-col-header">Entregado por cobrar <span class="count" id="count-entregado">0</span><span class="chevron">▾</span></div>
       <div class="kanban-cards" id="col-entregado"></div>
     </div>
+  </div>
+</div>
+
+<!-- ── PÁGINA NOTAS ─────────────────────────────────────── -->
+<div class="page" id="page-notas">
+  <div style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">📝 Notas</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Post-its compartidos para pendientes, recordatorios y pedidos parciales</div>
+      </div>
+      <button class="btn-refresh" onclick="loadNotas()">↻ Actualizar</button>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap">
+      <input type="text" id="nota-input" placeholder="Escribí una nota y apretá Enter..." onkeydown="if(event.key==='Enter')agregarNota()" style="flex:1;min-width:220px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" />
+      <div id="nota-color-picker" style="display:flex;gap:6px;align-items:center">
+        <button class="nota-color-btn selected" data-color="amarillo" onclick="setColorNueva('amarillo', this)" title="Amarillo" style="width:28px;height:28px;border-radius:50%;border:2px solid #d4a017;background:#FEF3C7;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn" data-color="rosa" onclick="setColorNueva('rosa', this)" title="Rosa" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#FCE4EC;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn" data-color="verde" onclick="setColorNueva('verde', this)" title="Verde" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#D1FAE5;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn" data-color="celeste" onclick="setColorNueva('celeste', this)" title="Celeste" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#DBEAFE;cursor:pointer;padding:0"></button>
+      </div>
+      <button onclick="agregarNota()" style="padding:10px 18px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-family:inherit;font-weight:600;cursor:pointer">+ Agregar</button>
+    </div>
+
+    <div id="notas-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
+    <div id="notas-empty" style="text-align:center;color:var(--muted);padding:32px 16px;font-size:14px;display:none">No hay notas aún. Escribí una arriba para empezar.</div>
   </div>
 </div>
 
@@ -2673,6 +2701,149 @@ async function loadKanban() {
   }
   hideLoading();
 }
+
+// ── NOTAS (post-its compartidos) ─────────────────────────────
+let notasCache = [];
+let colorNueva = 'amarillo';
+const NOTA_COLORES = {
+  amarillo: { bg: '#FEF3C7', border: '#F5D67B', dark: '#78350F' },
+  rosa:     { bg: '#FCE4EC', border: '#F8B8CC', dark: '#831843' },
+  verde:    { bg: '#D1FAE5', border: '#A7E8C7', dark: '#065F46' },
+  celeste:  { bg: '#DBEAFE', border: '#B0C7F0', dark: '#1E3A8A' },
+};
+
+function setColorNueva(color, btn) {
+  colorNueva = color;
+  document.querySelectorAll('.nota-color-btn').forEach(b => {
+    b.classList.remove('selected');
+    b.style.border = '2px solid transparent';
+  });
+  btn.classList.add('selected');
+  const c = NOTA_COLORES[color] || NOTA_COLORES.amarillo;
+  btn.style.border = '2px solid ' + c.dark;
+}
+
+async function loadNotas() {
+  try {
+    const notas = await supa.get('notas', 'select=*&order=hecha.asc,updated_at.desc');
+    notasCache = Array.isArray(notas) ? notas : [];
+    renderNotas();
+  } catch (e) {
+    document.getElementById('notas-lista').innerHTML =
+      '<div style="grid-column:1/-1;color:var(--error);text-align:center;padding:20px">Error al cargar notas: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderNotas() {
+  const cont  = document.getElementById('notas-lista');
+  const empty = document.getElementById('notas-empty');
+  if (!cont) return;
+  if (notasCache.length === 0) {
+    cont.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  cont.innerHTML = notasCache.map(n => notaCardHTML(n)).join('');
+}
+
+function notaCardHTML(n) {
+  const c = NOTA_COLORES[n.color] || NOTA_COLORES.amarillo;
+  const opacity = n.hecha ? '0.55' : '1';
+  const textDecoration = n.hecha ? 'line-through' : 'none';
+  const fecha = n.updated_at ? new Date(n.updated_at).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) : '';
+  return `
+    <div style="background:${c.bg};border:1px solid ${c.border};border-radius:8px;padding:14px 14px 10px;box-shadow:0 2px 6px rgba(0,0,0,0.05);opacity:${opacity};transition:opacity 0.15s;min-height:110px;display:flex;flex-direction:column;gap:6px">
+      <div contenteditable="true" onblur="guardarTextoNota(${n.id}, this.innerText)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur();}" style="flex:1;font-size:14px;color:${c.dark};line-height:1.4;text-decoration:${textDecoration};outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:32px">${escapeHtml(n.texto || '')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:6px;border-top:1px dashed ${c.border}">
+        <div style="display:flex;gap:4px;align-items:center">
+          <button onclick="toggleHecha(${n.id})" title="${n.hecha ? 'Marcar pendiente' : 'Marcar hecha'}" style="border:none;background:transparent;cursor:pointer;font-size:16px;padding:2px 4px">${n.hecha ? '↩' : '✓'}</button>
+          <button onclick="ciclarColorNota(${n.id})" title="Cambiar color" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:2px 4px">🎨</button>
+          <button onclick="borrarNota(${n.id})" title="Borrar" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>
+        </div>
+        <div style="font-size:10px;color:${c.dark};opacity:0.55">${escapeHtml(n.autor || '')} · ${fecha}</div>
+      </div>
+    </div>`;
+}
+
+async function agregarNota() {
+  const input = document.getElementById('nota-input');
+  const texto = (input.value || '').trim();
+  if (!texto) return;
+  const autor = (await supabaseAuth.auth.getSession())?.data?.session?.user?.email || '';
+  try {
+    const creada = await supa.post('notas', { texto, color: colorNueva, hecha: false, autor });
+    if (Array.isArray(creada)) notasCache.unshift(creada[0]);
+    input.value = '';
+    renderNotas();
+  } catch (e) {
+    alert('No se pudo agregar la nota: ' + e.message);
+  }
+}
+
+async function guardarTextoNota(id, texto) {
+  const n = notasCache.find(x => x.id === id);
+  if (!n) return;
+  const nuevo = (texto || '').trim();
+  if (nuevo === n.texto) return;
+  n.texto = nuevo;
+  n.updated_at = new Date().toISOString();
+  try {
+    await supa.patch('notas', 'id=eq.' + id, { texto: nuevo, updated_at: n.updated_at });
+  } catch (e) {
+    alert('No se pudo guardar: ' + e.message);
+    loadNotas();
+  }
+}
+
+async function toggleHecha(id) {
+  const n = notasCache.find(x => x.id === id);
+  if (!n) return;
+  n.hecha = !n.hecha;
+  n.updated_at = new Date().toISOString();
+  try {
+    await supa.patch('notas', 'id=eq.' + id, { hecha: n.hecha, updated_at: n.updated_at });
+    // Reordenar: pendientes arriba
+    notasCache.sort((a, b) =>
+      (a.hecha === b.hecha) ? (b.updated_at || '').localeCompare(a.updated_at || '') : (a.hecha ? 1 : -1)
+    );
+    renderNotas();
+  } catch (e) {
+    alert('No se pudo actualizar: ' + e.message);
+    loadNotas();
+  }
+}
+
+async function ciclarColorNota(id) {
+  const n = notasCache.find(x => x.id === id);
+  if (!n) return;
+  const orden = ['amarillo', 'rosa', 'verde', 'celeste'];
+  const idx = orden.indexOf(n.color);
+  n.color = orden[(idx + 1) % orden.length];
+  n.updated_at = new Date().toISOString();
+  try {
+    await supa.patch('notas', 'id=eq.' + id, { color: n.color, updated_at: n.updated_at });
+    renderNotas();
+  } catch (e) {
+    alert('No se pudo cambiar color: ' + e.message);
+    loadNotas();
+  }
+}
+
+async function borrarNota(id) {
+  const n = notasCache.find(x => x.id === id);
+  if (!n) return;
+  if (!confirm('¿Borrar esta nota?\n\n"' + (n.texto || '').slice(0, 80) + '"')) return;
+  try {
+    await supa.delete('notas', 'id=eq.' + id);
+    notasCache = notasCache.filter(x => x.id !== id);
+    renderNotas();
+  } catch (e) {
+    alert('No se pudo borrar: ' + e.message);
+    loadNotas();
+  }
+}
+
 
 let filtroSemana = 'esta';
 
