@@ -553,10 +553,11 @@ canvas { width: 100% !important; }
       <div class="modulo-nombre">Facturación</div>
       <div class="modulo-desc">Facturas electrónicas AFIP</div>
     </button>
-    <button class="modulo-card" onclick="abrirModulo('tarjetas')">
+    <button class="modulo-card" onclick="abrirModulo('tarjetas')" style="position:relative">
       <div class="modulo-icon">📝</div>
       <div class="modulo-nombre">Tarjetas</div>
       <div class="modulo-desc">Notas y recordatorios compartidos</div>
+      <span id="badge-notas-nuevas" style="display:none;position:absolute;top:10px;right:12px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;padding:0 6px;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
     </button>
   </div>
 </div>
@@ -1239,6 +1240,8 @@ function mostrarInicio() {
   document.getElementById('nav-facturacion-tabs').style.display = 'none';
   document.getElementById('header-produccion').style.display = 'none';
   moduloActivo = null;
+  // Actualizar contador de notas nuevas (trae notas frescas en background)
+  _resolverMiEmail().then(() => cargarNotasParaBadge());
 }
 
 function abrirModulo(modulo) {
@@ -1363,6 +1366,11 @@ async function refreshModuloSiCorresponde(modulo) {
   const stale = (k) => ahora - (ultimoRefresh[k] || 0) >= CACHE_TTL_MS;
 
   try {
+    if (modulo === 'tarjetas') {
+      // Ya estás viendo las notas: recargar y marcarlas vistas
+      await loadNotas();
+      return;
+    }
     if (modulo === 'produccion') {
       if (stale('pedidos')) {
         const pedidos = await apiGetPedidos();
@@ -2733,9 +2741,58 @@ async function loadNotas() {
     const notas = await supa.get('notas', 'select=*&order=hecha.asc,updated_at.desc');
     notasCache = Array.isArray(notas) ? notas : [];
     renderNotas();
+    marcarNotasVistas();   // al abrir el módulo, quedan todas vistas
   } catch (e) {
     document.getElementById('notas-lista').innerHTML =
       '<div style="grid-column:1/-1;color:var(--error);text-align:center;padding:20px">Error al cargar notas: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// Trae las notas a la cache SIN abrir el módulo, solo para actualizar el contador
+async function cargarNotasParaBadge() {
+  try {
+    const notas = await supa.get('notas', 'select=id,autor,created_at&order=created_at.desc');
+    if (Array.isArray(notas)) { notasCache = notas; actualizarBadgeNotas(); }
+  } catch (e) { /* silencioso */ }
+}
+
+// Email del usuario actual (cacheado sincrónicamente para uso en render)
+let _miEmail = '';
+async function _resolverMiEmail() {
+  if (_miEmail) return _miEmail;
+  _miEmail = (await supabaseAuth.auth.getSession())?.data?.session?.user?.email || '';
+  return _miEmail;
+}
+
+function _keyUltimaVista() {
+  return 'notas_ultima_vista_' + (_miEmail || 'anon');
+}
+
+// Marca todas las notas actuales como vistas (guarda timestamp de ahora)
+function marcarNotasVistas() {
+  try {
+    localStorage.setItem(_keyUltimaVista(), new Date().toISOString());
+  } catch (e) {}
+  actualizarBadgeNotas();
+}
+
+// Cuenta notas creadas por OTRO usuario después de mi última visita y actualiza el badge
+function actualizarBadgeNotas() {
+  const badge = document.getElementById('badge-notas-nuevas');
+  if (!badge) return;
+  let ultimaVista = null;
+  try { ultimaVista = localStorage.getItem(_keyUltimaVista()); } catch (e) {}
+  const nuevas = (notasCache || []).filter(n => {
+    if (!n.created_at) return false;
+    if (n.autor && _miEmail && n.autor === _miEmail) return false; // propias no cuentan
+    if (!ultimaVista) return true; // primera vez: todas las ajenas son "nuevas"
+    return new Date(n.created_at) > new Date(ultimaVista);
+  }).length;
+  if (nuevas > 0) {
+    badge.textContent = nuevas > 99 ? '99+' : String(nuevas);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
   }
 }
 
