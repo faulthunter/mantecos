@@ -559,6 +559,11 @@ canvas { width: 100% !important; }
       <div class="modulo-desc">Notas y recordatorios compartidos</div>
       <span id="badge-notas-nuevas" style="display:none;position:absolute;top:10px;right:12px;background:#DC2626;color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;padding:0 6px;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
     </button>
+    <button class="modulo-card" onclick="abrirModulo('amasados')">
+      <div class="modulo-icon">🧮</div>
+      <div class="modulo-nombre">Calculadora de amasados</div>
+      <div class="modulo-desc">Cuántos amasados según lo pedido</div>
+    </button>
   </div>
 </div>
 
@@ -717,6 +722,29 @@ canvas { width: 100% !important; }
 
     <div id="notas-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
     <div id="notas-empty" style="text-align:center;color:var(--muted);padding:32px 16px;font-size:14px;display:none">No hay notas aún. Escribí una arriba para empezar.</div>
+  </div>
+</div>
+
+<!-- ── PÁGINA CALCULADORA DE AMASADOS ──────────────────── -->
+<div class="page" id="page-amasados">
+  <div style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">🧮 Calculadora de amasados</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Cuántos amasados hacer según lo pedido. El rendimiento se guarda automáticamente.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin:10px 0 14px">
+      <span style="font-size:12px;color:var(--muted)">Período:</span>
+      <div style="display:inline-flex;gap:4px;background:var(--bg);border-radius:10px;padding:3px">
+        <button id="amtab-esta"    onclick="setFiltroAmasados('esta')"    style="border:none;background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Esta semana</button>
+        <button id="amtab-proxima" onclick="setFiltroAmasados('proxima')" style="border:none;background:transparent;color:var(--muted);padding:6px 12px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Próxima</button>
+        <button id="amtab-todos"   onclick="setFiltroAmasados('todos')"   style="border:none;background:transparent;color:var(--muted);padding:6px 12px;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">Todos</button>
+      </div>
+    </div>
+
+    <div id="amasados-lista"></div>
   </div>
 </div>
 
@@ -1276,6 +1304,9 @@ function abrirModulo(modulo) {
   } else if (modulo === 'tarjetas') {
     showPage('notas');
     loadNotas();
+  } else if (modulo === 'amasados') {
+    showPage('amasados');
+    renderAmasados();
   }
 
   // Refresh perezoso: si pasaron ≥60s desde el último pull, actualiza los datos del módulo en background
@@ -2906,7 +2937,80 @@ async function borrarNota(id) {
   }
 }
 
+// ── CALCULADORA DE AMASADOS ──────────────────────────────────
+let filtroAmasados = 'esta';
+// Productos que se muestran (coinciden con los badges del header de producción)
+const AMASADO_PRODUCTOS = [
+  { key: 'medialunas', label: 'Medialunas' },
+  { key: 'croissants', label: 'Croissants' },
+  { key: 'panchoco',   label: 'Pan choco' },
+  { key: 'trenzas',    label: 'Trenzas' },
+  { key: 'hojaldres',  label: 'Hojaldres' },
+  { key: 'palmeritas', label: 'Palmeritas' },
+  { key: 'danesas',    label: 'Danesas' },
+  { key: 'rolls',      label: 'Roll de canela' },
+];
+const AMASADO_RINDE_DEFAULT = 30;
 
+function rendimientoAmasado(key) {
+  try {
+    const v = parseInt(localStorage.getItem('amasado_rinde_' + key));
+    if (!isNaN(v) && v > 0) return v;
+  } catch (e) {}
+  return AMASADO_RINDE_DEFAULT;
+}
+
+function guardarRendimiento(key, valor) {
+  const v = parseInt(valor);
+  if (isNaN(v) || v <= 0) return;
+  try { localStorage.setItem('amasado_rinde_' + key, String(v)); } catch (e) {}
+  // Recalcular solo esa fila
+  const totales = calcularTotalesProduccion(todosPedidos, filtroAmasados);
+  const pedido = totales[key] || 0;
+  const amasados = v > 0 ? Math.ceil(pedido / v) : 0;
+  const out = document.getElementById('amasado-result-' + key);
+  if (out) out.textContent = amasados + (amasados === 1 ? ' amasado' : ' amasados');
+}
+
+function setFiltroAmasados(f) {
+  filtroAmasados = f;
+  ['esta','proxima','todos'].forEach(x => {
+    const b = document.getElementById('amtab-' + x);
+    if (!b) return;
+    const activo = x === f;
+    b.style.background = activo ? 'var(--accent)' : 'transparent';
+    b.style.color = activo ? '#fff' : 'var(--muted)';
+  });
+  renderAmasados();
+}
+
+function renderAmasados() {
+  const cont = document.getElementById('amasados-lista');
+  if (!cont) return;
+  const totales = calcularTotalesProduccion(todosPedidos, filtroAmasados);
+
+  cont.innerHTML = AMASADO_PRODUCTOS.map(p => {
+    const pedido = totales[p.key] || 0;
+    const rinde  = rendimientoAmasado(p.key);
+    const amasados = rinde > 0 ? Math.ceil(pedido / rinde) : 0;
+    const dim = pedido === 0 ? 'opacity:0.5' : '';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--surface);${dim}">
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:15px;font-weight:600;color:var(--text)">${p.label}</div>
+          <div style="font-size:12px;color:var(--muted)">${pedido} pedidas</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--muted)">rinde</span>
+          <input type="number" min="1" value="${rinde}" onchange="guardarRendimiento('${p.key}', this.value)" onclick="this.select()" style="width:64px;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;text-align:center" />
+          <span style="font-size:12px;color:var(--muted)">x amasado</span>
+        </div>
+        <div style="min-width:96px;text-align:right">
+          <div id="amasado-result-${p.key}" style="font-size:17px;font-weight:800;color:var(--accent);letter-spacing:-0.5px">${amasados}${amasados === 1 ? ' amasado' : ' amasados'}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
 let filtroSemana = 'esta';
 
 function getLunesYSabado(offsetSemanas) {
