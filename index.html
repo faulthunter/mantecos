@@ -733,6 +733,7 @@ canvas { width: 100% !important; }
         <div style="font-size:18px;font-weight:700;color:var(--text)">🧮 Calculadora de amasados</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">Cuántos amasados hacer según lo pedido. El rendimiento se guarda automáticamente.</div>
       </div>
+      <button onclick="imprimirPlanillaAmasados()" style="padding:10px 16px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap">🖨️ Imprimir planilla</button>
     </div>
 
     <div style="display:flex;gap:8px;align-items:center;margin:10px 0 14px">
@@ -3041,7 +3042,129 @@ function dibujarAmasados() {
       </div>`;
   }).join('');
 }
-let filtroSemana = 'esta';
+
+function imprimirPlanillaAmasados() {
+  const totales = calcularTotalesProduccion(todosPedidos, filtroAmasados);
+  // Solo productos con amasados > 0
+  const filas = AMASADO_PRODUCTOS.map(p => {
+    const pedido = totales[p.key] || 0;
+    const rinde  = rendimientoAmasado(p.key);
+    const amasados = rinde > 0 ? Math.ceil(pedido / rinde) : 0;
+    return { label: p.label, pedido, rinde, amasados };
+  }).filter(f => f.amasados > 0);
+
+  if (filas.length === 0) {
+    alert('No hay amasados para imprimir en este período.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const W = 210, M = 16;
+
+  const C_HEADER = [214, 190, 180];
+  const C_DARK   = [60, 45, 38];
+  const C_MID    = [120, 100, 88];
+  const C_ROW    = [250, 246, 243];
+  const C_LINE   = [210, 195, 185];
+
+  // Encabezado
+  doc.setFillColor(...C_HEADER);
+  doc.rect(0, 0, W, 20, 'F');
+  doc.setTextColor(...C_DARK);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text('La Chica Manteca  ·  Planilla de Amasados', M, 13);
+
+  // Período + fecha
+  const periodoTxt = filtroAmasados === 'esta' ? 'Esta semana'
+                   : filtroAmasados === 'proxima' ? 'Próxima semana' : 'Todos los pedidos';
+  const hoyTxt = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'long' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...C_MID);
+  doc.text(periodoTxt + '  ·  ' + hoyTxt, M, 27);
+
+  // Cabecera de tabla
+  let y = 36;
+  const xProd = M;
+  const xPedidas = 96;
+  const xRinde = 128;
+  const xAmasados = 158;
+  const xCheck = W - M - 10;
+  const rowW = W - 2 * M;
+
+  doc.setFillColor(...C_DARK);
+  doc.rect(M, y, rowW, 9, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Producto', xProd + 2, y + 6);
+  doc.text('Pedidas', xPedidas, y + 6, { align: 'right' });
+  doc.text('Rinde', xRinde, y + 6, { align: 'right' });
+  doc.text('Amasados', xAmasados, y + 6, { align: 'right' });
+  doc.text('Hecho', xCheck, y + 6, { align: 'center' });
+  y += 9;
+
+  // Filas
+  const ROW_H = 13;
+  let totalAmasados = 0;
+  filas.forEach((f, i) => {
+    if (i % 2 === 1) {
+      doc.setFillColor(...C_ROW);
+      doc.rect(M, y, rowW, ROW_H, 'F');
+    }
+    doc.setTextColor(...C_DARK);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(f.label, xProd + 2, y + 8.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...C_MID);
+    doc.text(String(f.pedido), xPedidas, y + 8.5, { align: 'right' });
+    doc.text(String(f.rinde), xRinde, y + 8.5, { align: 'right' });
+
+    // Amasados en grande y destacado
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(...C_DARK);
+    doc.text(String(f.amasados), xAmasados, y + 9, { align: 'right' });
+
+    // Checkbox para tildar a mano
+    doc.setDrawColor(...C_MID);
+    doc.setLineWidth(0.4);
+    doc.rect(xCheck - 4, y + 4, 8, 6);
+
+    // Línea divisoria
+    doc.setDrawColor(...C_LINE);
+    doc.setLineWidth(0.2);
+    doc.line(M, y + ROW_H, W - M, y + ROW_H);
+
+    totalAmasados += f.amasados;
+    y += ROW_H;
+  });
+
+  // Total
+  y += 4;
+  doc.setFillColor(...C_HEADER);
+  doc.rect(M, y, rowW, 11, 'F');
+  doc.setTextColor(...C_DARK);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('TOTAL DE AMASADOS', xProd + 2, y + 7.5);
+  doc.setFontSize(15);
+  doc.text(String(totalAmasados), xAmasados, y + 8, { align: 'right' });
+
+  // Pie
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...C_MID);
+  doc.text('Generado ' + new Date().toLocaleString('es-AR'), M, 285);
+
+  doc.save('planilla-amasados.pdf');
+}
+
 
 function getLunesYSabado(offsetSemanas) {
   const hoy = new Date();
