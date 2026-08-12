@@ -707,10 +707,9 @@ canvas { width: 100% !important; }
     <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap">
       <input type="text" id="nota-input" placeholder="Escribí una nota y apretá Enter..." onkeydown="if(event.key==='Enter')agregarNota()" style="flex:1;min-width:220px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px" />
       <div id="nota-color-picker" style="display:flex;gap:6px;align-items:center">
-        <button class="nota-color-btn selected" data-color="amarillo" onclick="setColorNueva('amarillo', this)" title="Amarillo" style="width:28px;height:28px;border-radius:50%;border:2px solid #d4a017;background:#FEF3C7;cursor:pointer;padding:0"></button>
-        <button class="nota-color-btn" data-color="rosa" onclick="setColorNueva('rosa', this)" title="Rosa" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#FCE4EC;cursor:pointer;padding:0"></button>
-        <button class="nota-color-btn" data-color="verde" onclick="setColorNueva('verde', this)" title="Verde" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#D1FAE5;cursor:pointer;padding:0"></button>
-        <button class="nota-color-btn" data-color="celeste" onclick="setColorNueva('celeste', this)" title="Celeste" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#DBEAFE;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn selected" data-color="rojo" onclick="setColorNueva('rojo', this)" title="Urgente" style="width:28px;height:28px;border-radius:50%;border:2px solid #B91C1C;background:#FEE2E2;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn" data-color="amarillo" onclick="setColorNueva('amarillo', this)" title="No tan urgente" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#FEF3C7;cursor:pointer;padding:0"></button>
+        <button class="nota-color-btn" data-color="verde" onclick="setColorNueva('verde', this)" title="No es urgente" style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;background:#D1FAE5;cursor:pointer;padding:0"></button>
       </div>
       <button onclick="agregarNota()" style="padding:10px 18px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-family:inherit;font-weight:600;cursor:pointer">+ Agregar</button>
     </div>
@@ -2711,12 +2710,11 @@ async function loadKanban() {
 
 // ── NOTAS (post-its compartidos) ─────────────────────────────
 let notasCache = [];
-let colorNueva = 'amarillo';
+let colorNueva = 'rojo';
 const NOTA_COLORES = {
-  amarillo: { bg: '#FEF3C7', border: '#F5D67B', dark: '#78350F' },
-  rosa:     { bg: '#FCE4EC', border: '#F8B8CC', dark: '#831843' },
-  verde:    { bg: '#D1FAE5', border: '#A7E8C7', dark: '#065F46' },
-  celeste:  { bg: '#DBEAFE', border: '#B0C7F0', dark: '#1E3A8A' },
+  rojo:     { bg: '#FEE2E2', border: '#F5B5B5', dark: '#B91C1C', label: 'Urgente' },
+  amarillo: { bg: '#FEF3C7', border: '#F5D67B', dark: '#92400E', label: 'No tan urgente' },
+  verde:    { bg: '#D1FAE5', border: '#A7E8C7', dark: '#065F46', label: 'No es urgente' },
 };
 
 function setColorNueva(color, btn) {
@@ -2824,7 +2822,7 @@ async function toggleHecha(id) {
 async function ciclarColorNota(id) {
   const n = notasCache.find(x => x.id === id);
   if (!n) return;
-  const orden = ['amarillo', 'rosa', 'verde', 'celeste'];
+  const orden = ['rojo', 'amarillo', 'verde'];
   const idx = orden.indexOf(n.color);
   n.color = orden[(idx + 1) % orden.length];
   n.updated_at = new Date().toISOString();
