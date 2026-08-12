@@ -553,13 +553,17 @@ canvas { width: 100% !important; }
       <div class="modulo-nombre">Facturación</div>
       <div class="modulo-desc">Facturas electrónicas AFIP</div>
     </button>
+    <button class="modulo-card" onclick="abrirModulo('tarjetas')">
+      <div class="modulo-icon">📝</div>
+      <div class="modulo-nombre">Tarjetas</div>
+      <div class="modulo-desc">Notas y recordatorios compartidos</div>
+    </button>
   </div>
 </div>
 
 <nav class="nav" id="nav-produccion" style="display:none">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
-  <button class="nav-btn"        id="nav-notas"  onclick="showPage('notas'); loadNotas()">📝 Notas</button>
 </nav>
 
 <nav class="nav" id="nav-costeo-tabs" style="display:none">
@@ -1267,6 +1271,9 @@ function abrirModulo(modulo) {
     document.getElementById('fact-desde').value = fechaARG(primero);
     document.getElementById('fact-hasta').value = fechaARG(hoy);
     cargarPedidosFacturacion();
+  } else if (modulo === 'tarjetas') {
+    showPage('notas');
+    loadNotas();
   }
 
   // Refresh perezoso: si pasaron ≥60s desde el último pull, actualiza los datos del módulo en background
