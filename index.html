@@ -1165,6 +1165,12 @@ const supa = {
     return r.json();
   },
 
+  async postRaw(table, body, extraHeaders) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: await this._h(extraHeaders), body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(`Supabase UPSERT ${table} falló (${r.status}): ${await r.text()}`);
+    return r.json();
+  },
+
   async patch(table, query, body) {
     const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: await this._h(), body: JSON.stringify(body) });
     if (!r.ok) throw new Error(`Supabase PATCH ${table} falló (${r.status}): ${await r.text()}`);
@@ -2939,6 +2945,7 @@ async function borrarNota(id) {
 
 // ── CALCULADORA DE AMASADOS ──────────────────────────────────
 let filtroAmasados = 'esta';
+let rendimientosAmasado = {}; // { producto: rinde } cargado desde la base
 // Productos que se muestran (coinciden con los badges del header de producción)
 const AMASADO_PRODUCTOS = [
   { key: 'medialunas', label: 'Medialunas' },
@@ -2953,23 +2960,38 @@ const AMASADO_PRODUCTOS = [
 const AMASADO_RINDE_DEFAULT = 30;
 
 function rendimientoAmasado(key) {
-  try {
-    const v = parseInt(localStorage.getItem('amasado_rinde_' + key));
-    if (!isNaN(v) && v > 0) return v;
-  } catch (e) {}
-  return AMASADO_RINDE_DEFAULT;
+  const v = rendimientosAmasado[key];
+  return (typeof v === 'number' && v > 0) ? v : AMASADO_RINDE_DEFAULT;
 }
 
-function guardarRendimiento(key, valor) {
+// Cargar rendimientos desde la base
+async function cargarRendimientos() {
+  try {
+    const rows = await supa.get('config_amasados', 'select=producto,rinde');
+    rendimientosAmasado = {};
+    if (Array.isArray(rows)) rows.forEach(r => { rendimientosAmasado[r.producto] = Number(r.rinde); });
+  } catch (e) {
+    console.warn('cargarRendimientos error:', e.message);
+  }
+}
+
+async function guardarRendimiento(key, valor) {
   const v = parseInt(valor);
   if (isNaN(v) || v <= 0) return;
-  try { localStorage.setItem('amasado_rinde_' + key, String(v)); } catch (e) {}
-  // Recalcular solo esa fila
+  rendimientosAmasado[key] = v;
+  // Recalcular esa fila al instante
   const totales = calcularTotalesProduccion(todosPedidos, filtroAmasados);
   const pedido = totales[key] || 0;
-  const amasados = v > 0 ? Math.ceil(pedido / v) : 0;
+  const amasados = Math.ceil(pedido / v);
   const out = document.getElementById('amasado-result-' + key);
   if (out) out.textContent = amasados + (amasados === 1 ? ' amasado' : ' amasados');
+  // Persistir en la base (upsert por producto)
+  try {
+    await supa.postRaw('config_amasados', { producto: key, rinde: v, updated_at: new Date().toISOString() },
+      { Prefer: 'resolution=merge-duplicates,return=representation' });
+  } catch (e) {
+    alert('No se pudo guardar el rendimiento: ' + e.message);
+  }
 }
 
 function setFiltroAmasados(f) {
@@ -2981,10 +3003,18 @@ function setFiltroAmasados(f) {
     b.style.background = activo ? 'var(--accent)' : 'transparent';
     b.style.color = activo ? '#fff' : 'var(--muted)';
   });
-  renderAmasados();
+  dibujarAmasados();
 }
 
-function renderAmasados() {
+// Carga la config desde la base y luego dibuja
+async function renderAmasados() {
+  const cont = document.getElementById('amasados-lista');
+  if (cont) cont.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">Cargando...</div>';
+  await cargarRendimientos();
+  dibujarAmasados();
+}
+
+function dibujarAmasados() {
   const cont = document.getElementById('amasados-lista');
   if (!cont) return;
   const totales = calcularTotalesProduccion(todosPedidos, filtroAmasados);
