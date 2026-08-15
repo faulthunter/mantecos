@@ -4363,15 +4363,19 @@ async function cargarPedidosFacturacion() {
 
     // Traer facturas emitidas de Supabase para marcar pedidos ya facturados
     try {
-      const facturasRes = await fetch(SUPA_URL + '/rest/v1/facturas?select=pedido_id,cae,nro,tipo', {
+      const facturasRes = await fetch(SUPA_URL + '/rest/v1/facturas?select=pedido_id,cae,nro,tipo,anulada,es_nota_credito', {
         headers: await supa._h()
       });
       if (facturasRes.ok) {
         const facturasDB = await facturasRes.json();
         if (Array.isArray(facturasDB)) {
+          // Primero limpiar el flag (por si una factura fue anulada)
           facturasDB.forEach(f => {
             const p = todosPedidos.find(p => p.id === f.pedido_id);
-            if (p) { p.facturado = true; p.cae = f.cae; p.nroFactura = f.nro; p.tipoFactura = f.tipo; }
+            // Solo marca facturado una factura VIGENTE: no anulada y no es nota de crédito
+            if (p && !f.anulada && !f.es_nota_credito) {
+              p.facturado = true; p.cae = f.cae; p.nroFactura = f.nro; p.tipoFactura = f.tipo;
+            }
           });
         }
       }
@@ -4697,6 +4701,84 @@ function setHistPeriodo(p, btn) {
   cargarHistorialFacturas();
 }
 
+async function cancelarFactura(facturaId) {
+  // Traer la factura original
+  let f;
+  try {
+    const rows = await supa.get('facturas', 'id=eq.' + facturaId + '&select=*');
+    f = Array.isArray(rows) ? rows[0] : null;
+  } catch (e) { alert('No se pudo leer la factura: ' + e.message); return; }
+  if (!f) { alert('No se encontró la factura.'); return; }
+  if (f.anulada) { alert('Esta factura ya está anulada.'); return; }
+
+  const nroFmt = String(f.punto_venta || 10).padStart(4,'0') + '-' + String(f.nro || 0).padStart(8,'0');
+  const ok = confirm(
+    '¿Cancelar la Factura ' + (f.tipo || 'B') + ' N° ' + nroFmt + '?\n\n' +
+    'Cliente: ' + (f.cliente || '-') + '\n' +
+    'Total: $' + Math.round(f.total || 0).toLocaleString('es-AR') + '\n\n' +
+    'Se emitirá una NOTA DE CRÉDITO ante AFIP por el mismo monto para anularla. ' +
+    'Esta acción es definitiva y el pedido quedará disponible para volver a facturar.'
+  );
+  if (!ok) return;
+
+  // Recuperar el pedido para reconstruir items/envío (la NC debe tener el mismo detalle)
+  let pedido = todosPedidos.find(p => p.id === f.pedido_id);
+  if (!pedido) {
+    try {
+      const rows = await supa.get('pedidos', 'id=eq.' + encodeURIComponent(f.pedido_id) + '&select=*,items_pedido(*)');
+      pedido = Array.isArray(rows) ? rows[0] : null;
+    } catch (e) {}
+  }
+  const items = pedido ? (pedido.items || pedido.items_pedido || []).map(it => ({
+    nombre: it.nombre, cantidad: it.cantidad, precio: it.precio
+  })) : [];
+  const envio = pedido ? (Number(pedido.envio) || 0) : 0;
+
+  // El importe base (impTotal) que espera el endpoint es el subtotal de items sin envío
+  const itemsSubtotal = items.reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
+
+  const btnMsg = document.getElementById('lista-historial-facturas');
+  try {
+    const session = await supabaseAuth.auth.getSession();
+    const accessToken = session?.data?.session?.access_token || '';
+    if (!accessToken) { alert('Sesión expirada. Iniciá sesión de nuevo.'); return; }
+
+    const res = await fetch('/api/facturar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+      body: JSON.stringify({
+        modo: 'nota_credito',
+        tipo: f.tipo,
+        cuitCliente: pedido?.cuit || '',
+        condicionIva: f.con_iva ? 'RI' : 'CF',
+        impTotal: itemsSubtotal,
+        envio,
+        conIva: !!f.con_iva,
+        puntoVenta: f.punto_venta || 10,
+        pedidoId: f.pedido_id,
+        cliente: f.cliente || '',
+        items,
+        facturaOriginal: { id: f.id, tipo: f.tipo, nro: f.nro, punto_venta: f.punto_venta || 10 },
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert('Error al emitir la Nota de Crédito: ' + (data.error || res.status));
+      return;
+    }
+
+    // Actualizar cache del pedido: ya no está facturado
+    if (pedido) { pedido.facturado = false; pedido.cae = null; }
+
+    alert('✓ Nota de Crédito emitida (N° ' + data.nroComprobante + ', CAE ' + data.CAE + ').\n' +
+          'La factura quedó anulada y el pedido está disponible para volver a facturar.');
+    cargarHistorialFacturas();
+    if (typeof cargarPedidosFacturacion === 'function') cargarPedidosFacturacion();
+  } catch (e) {
+    alert('Error al cancelar la factura: ' + e.message);
+  }
+}
+
 async function cargarHistorialFacturas() {
   const desde    = document.getElementById('hist-desde').value;
   const hasta    = document.getElementById('hist-hasta').value;
@@ -4742,14 +4824,25 @@ async function cargarHistorialFacturas() {
     document.getElementById('hist-kpi-count').textContent = facturas.length;
 
     container.innerHTML = facturas.map(f => {
+      const esNC = f.es_nota_credito;
+      const comprobante = esNC ? 'N. Créd.' : 'Fcta.';
       const nroFmt = String(f.punto_venta || 10).padStart(4,'0') + '-' + String(f.nro || 0).padStart(8,'0');
       const fecha  = f.fecha_emision || f.created_at?.split('T')[0] || '-';
       const pdfBtn = f.pdf_url
         ? '<a href="' + f.pdf_url + '" target="_blank" rel="noopener" style="padding:6px 12px;background:var(--accent);color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">📄 PDF</a>'
         : '';
-      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);gap:8px">'
+      // Botón cancelar: solo en facturas (no NC), no ya anuladas
+      const cancelBtn = (!esNC && !f.anulada)
+        ? '<button onclick="cancelarFactura(' + f.id + ')" style="padding:6px 12px;background:transparent;color:#B91C1C;border:1px solid #F5B5B5;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">✕ Cancelar</button>'
+        : '';
+      // Chips de estado
+      let chip = '';
+      if (esNC)        chip = ' <span style="background:#DBEAFE;color:#1E3A8A;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle">NOTA DE CRÉDITO</span>';
+      else if (f.anulada) chip = ' <span style="background:#FEE2E2;color:#B91C1C;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle">ANULADA</span>';
+      const rowOpacity = f.anulada ? 'opacity:0.6;' : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);gap:8px;' + rowOpacity + '">'
         + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:15px;font-weight:600;white-space:nowrap">Fcta. ' + (f.tipo || 'B') + ' N° ' + nroFmt + '</div>'
+        + '<div style="font-size:15px;font-weight:600;white-space:nowrap">' + comprobante + ' ' + (f.tipo || 'B') + ' N° ' + nroFmt + chip + '</div>'
         + '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + (f.cliente || '-') + ' · ' + fecha + '</div>'
         + '<div style="font-size:11px;color:var(--muted);margin-top:2px">CAE: ' + (f.cae || '-') + ' · Vto: ' + (f.cae_vto || '-') + '</div>'
         + '<div style="font-size:11px;color:var(--muted);margin-top:1px">Pedido: ' + (f.pedido_id || '-') + (f.con_iva ? ' · Con IVA' : '') + '</div>'
@@ -4757,6 +4850,7 @@ async function cargarHistorialFacturas() {
         + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'
         + '<span style="font-size:15px;font-weight:700;color:var(--accent)">$' + Math.round(f.total || 0).toLocaleString('es-AR') + '</span>'
         + pdfBtn
+        + cancelBtn
         + '</div>'
         + '</div>';
     }).join('');

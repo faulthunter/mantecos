@@ -57,10 +57,15 @@ export default async function handler(req, res) {
   try {
     const { tipo, cuitCliente, condicionIva, impTotal, envio: envioRaw, conIva, items: pedidoItems } = req.body;
     const userEmail = emailVerificado;
+    const modo = req.body.modo || 'factura'; // 'factura' | 'nota_credito'
+    const esNC = modo === 'nota_credito';
+    // Para NC: datos del comprobante original que se está anulando
+    const facturaOriginal = req.body.facturaOriginal || null; // { id, tipo, nro, punto_venta }
 
     // ── CHEQUEO ANTI-DUPLICADO ───────────────────────────────
+    // Solo para facturas. Una nota de crédito NO es duplicado de la factura.
     const pedidoId = req.body.pedidoId || '';
-    if (pedidoId) {
+    if (pedidoId && !esNC) {
       try {
         const dupRes = await fetch(
           `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
@@ -128,7 +133,10 @@ export default async function handler(req, res) {
     const opEx    = 0; // Siempre gravado
 
     // Tipo de comprobante y receptor
-    const cbteTipo  = tipo === 'A' ? 1 : 6;
+    // Factura A=1, B=6 · Nota de Crédito A=3, B=8
+    const cbteTipo  = esNC
+      ? (tipo === 'A' ? 3 : 8)
+      : (tipo === 'A' ? 1 : 6);
     const docTipo   = tipo === 'A' ? 80 : 99;
     const docNro    = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
@@ -165,6 +173,16 @@ export default async function handler(req, res) {
             Id:       5,        // 21%
             BaseImp:  neto,
             Importe:  ivaAmt,
+          }
+        ]
+      }),
+      // Para Nota de Crédito: asociar el comprobante original que se está anulando
+      ...(esNC && facturaOriginal && {
+        CbtesAsoc: [
+          {
+            Tipo:  facturaOriginal.tipo === 'A' ? 1 : 6, // tipo de la FACTURA original
+            PtoVta: Number(facturaOriginal.punto_venta) || ptoVta,
+            Nro:   Number(facturaOriginal.nro),
           }
         ]
       }),
@@ -294,7 +312,8 @@ export default async function handler(req, res) {
       .trim().replace(/\s+/g, '_')                       // espacios a guiones bajos
       .substring(0, 30);                                 // máximo 30 chars
     const nroConCeros = String(result.voucherNumber).padStart(8, '0');
-    const fileName = `factura-${tipo}-${nroConCeros}-${razonSlug}.pdf`;
+    const prefijoArch = esNC ? 'notacredito' : 'factura';
+    const fileName = `${prefijoArch}-${tipo}-${nroConCeros}-${razonSlug}.pdf`;
 
     const pdfData = {
       file_name: fileName,
@@ -316,6 +335,8 @@ export default async function handler(req, res) {
       con_iva:      !!conIva,
       pdf_url:      '',
       fecha_emision: now.toISOString().split('T')[0],
+      es_nota_credito: esNC,
+      ref_factura_id:  esNC && facturaOriginal ? Number(facturaOriginal.id) : null,
     };
     try {
       const saveRes = await fetch(`${SUPA_URL}/rest/v1/facturas`, {
@@ -336,6 +357,28 @@ export default async function handler(req, res) {
       }
     } catch(saveErr) {
       console.error('Error guardando factura en Supabase:', saveErr.message);
+    }
+
+    // ── 1b. Si es NC, marcar la factura original como anulada ──
+    if (esNC && facturaOriginal && facturaOriginal.id) {
+      try {
+        await fetch(
+          `${SUPA_URL}/rest/v1/facturas?id=eq.${encodeURIComponent(facturaOriginal.id)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPA_ANON,
+              'Authorization': `Bearer ${userToken}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ anulada: true })
+          }
+        );
+        console.log('Factura original', facturaOriginal.id, 'marcada como anulada');
+      } catch(anulErr) {
+        console.error('Error marcando factura original como anulada:', anulErr.message);
+      }
     }
 
     // ── 2. GENERAR PDF (opcional — si falla la factura ya está en AFIP y Supabase) ──
@@ -410,6 +453,7 @@ export default async function handler(req, res) {
       total,
       puntoVenta:     ptoVta,
       pdfUrl:         pdfUrlFinal,
+      esNotaCredito:  esNC,
     });
 
   } catch (e) {
