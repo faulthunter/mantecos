@@ -64,11 +64,14 @@ export default async function handler(req, res) {
 
     // ── CHEQUEO ANTI-DUPLICADO ───────────────────────────────
     // Solo para facturas. Una nota de crédito NO es duplicado de la factura.
+    // IMPORTANTE: solo cuentan facturas VIGENTES — se excluyen las anuladas
+    // (anulada=false) y las notas de crédito (es_nota_credito=false). Así, si una
+    // factura fue anulada con NC, el pedido puede volver a facturarse.
     const pedidoId = req.body.pedidoId || '';
     if (pedidoId && !esNC) {
       try {
         const dupRes = await fetch(
-          `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
+          `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&anulada=eq.false&es_nota_credito=eq.false&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
           { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}` } }
         );
         if (dupRes.ok) {
