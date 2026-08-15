@@ -4750,7 +4750,9 @@ async function cancelarFactura(facturaId) {
         modo: 'nota_credito',
         tipo: f.tipo,
         cuitCliente: pedido?.cuit || '',
-        condicionIva: f.con_iva ? 'RI' : 'CF',
+        // La condición IVA del receptor depende del TIPO de comprobante, no de con_iva:
+        // NC-A → receptor RI (obligatorio) · NC-B → Consumidor Final
+        condicionIva: f.tipo === 'A' ? 'RI' : 'CF',
         impTotal: itemsSubtotal,
         envio,
         conIva: !!f.con_iva,

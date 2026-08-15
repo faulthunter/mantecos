@@ -141,9 +141,12 @@ export default async function handler(req, res) {
     const docNro    = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
     // condicionIva → CondicionIVAReceptorId
-    // Para Factura A el receptor SIEMPRE debe ser RI (id:1) — AFIP error 10243 si no
+    // Para Factura/NC A el receptor SIEMPRE debe ser RI (id:1) — AFIP error 10243 si no
     const condMap   = { RI: 1, EX: 4, CF: 5, MONO: 6 };
-    const condIvaId = tipo === 'A' ? 1 : (condMap[condicionIva] || 5);
+    let condIvaId = tipo === 'A' ? 1 : (condMap[condicionIva] || 5);
+    // Salvaguarda: una NC/Factura B NUNCA puede tener receptor Responsable Inscripto (id:1).
+    // Si por error llega RI en un comprobante B, lo forzamos a Consumidor Final (id:5).
+    if (tipo !== 'A' && condIvaId === 1) condIvaId = 5;
 
     const ptoVta = 10;
     // Fecha local Argentina (UTC-3) para evitar que de madrugada tome el día anterior
