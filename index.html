@@ -3445,7 +3445,7 @@ function abrirEditar(p) {
   document.getElementById('edit-items-container').innerHTML = '';
   editItemCount = 0;
   if (p.items && p.items.length > 0) {
-    p.items.forEach(it => addEditItem(it.nombre, it.cantidad));
+    p.items.forEach(it => addEditItem(it.nombre, it.cantidad, it.precio));
   } else {
     addEditItem();
   }
@@ -3472,14 +3472,18 @@ function cerrarModal() {
   pedidoEnEdicion = null;
 }
 
-function addEditItem(nombrePresel, cantPresel) {
+function addEditItem(nombrePresel, cantPresel, precioOriginal) {
   editItemCount++;
   const id = 'edit-item-' + Date.now() + '-' + editItemCount;
   const div = document.createElement('div');
   div.className = 'item-row';
   div.id = id;
+  // Guardamos el nombre y precio originales del item para conservar el precio histórico
+  const origAttrs = (nombrePresel != null && precioOriginal != null)
+    ? ` data-orig-nombre="${String(nombrePresel).replace(/"/g,'&quot;')}" data-orig-precio="${precioOriginal}"`
+    : '';
   div.innerHTML = `
-    <select onchange="recalcEditTotal()" data-type="prod">
+    <select onchange="recalcEditTotal()" data-type="prod"${origAttrs}>
       <option value="">— Producto —</option>
       ${productos.map(p => `<option value="${p.nombre}" data-precio="${p.precio}" ${p.nombre === nombrePresel ? 'selected' : ''}>${p.nombre}</option>`).join('')}
     </select>
@@ -3488,6 +3492,18 @@ function addEditItem(nombrePresel, cantPresel) {
   `;
   document.getElementById('edit-items-container').appendChild(div);
   recalcEditTotal();
+}
+
+// Devuelve el precio a usar para una fila: el original si el producto no cambió,
+// o el precio actual del catálogo si se seleccionó otro producto distinto.
+function precioFilaEdit(sel) {
+  const origNombre = sel.getAttribute('data-orig-nombre');
+  const origPrecio = sel.getAttribute('data-orig-precio');
+  if (origNombre != null && origPrecio != null && sel.value === origNombre) {
+    return parseFloat(origPrecio) || 0;   // mismo producto → precio congelado del pedido
+  }
+  // producto nuevo o cambiado → precio actual del catálogo
+  return parseFloat(sel.selectedOptions[0]?.dataset.precio) || 0;
 }
 
 function removeEditItem(id) {
@@ -3508,7 +3524,7 @@ function recalcEditTotal() {
     const sel  = row.querySelector('[data-type="prod"]');
     const cant = row.querySelector('[data-type="cant"]');
     if (sel && sel.value && cant) {
-      const precio = parseFloat(sel.selectedOptions[0].dataset.precio) || 0;
+      const precio = precioFilaEdit(sel);
       total += precio * (parseInt(cant.value) || 0);
     }
   });
@@ -3527,7 +3543,7 @@ function getEditItems() {
     const cant = row.querySelector('[data-type="cant"]');
     if (sel && sel.value && cant) {
       const opt = sel.selectedOptions[0];
-      items.push({ nombre: opt.value, precio: parseFloat(opt.dataset.precio) || 0, cantidad: parseInt(cant.value) || 1 });
+      items.push({ nombre: opt.value, precio: precioFilaEdit(sel), cantidad: parseInt(cant.value) || 1 });
     }
   });
   return items;
