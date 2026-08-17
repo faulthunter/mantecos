@@ -1041,9 +1041,9 @@ canvas { width: 100% !important; }
       <div class="card" style="margin-top:12px">
         <div class="card-title">Período</div>
         <div class="stats-period">
-          <button class="period-btn active" onclick="setPeriod('7d',this)">7 días</button>
+          <button class="period-btn" onclick="setPeriod('7d',this)">7 días</button>
           <button class="period-btn" onclick="setPeriod('30d',this)">30 días</button>
-          <button class="period-btn" onclick="setPeriod('mes',this)">Este mes</button>
+          <button class="period-btn active" onclick="setPeriod('mes',this)">Este mes</button>
           <button class="period-btn" onclick="setPeriod('3m',this)">3 meses</button>
           <button class="period-btn" onclick="setPeriod('anio',this)">Este año</button>
           <button class="period-btn" onclick="setPeriod('custom',this)">Personalizado</button>
@@ -3992,9 +3992,9 @@ async function initStats() {
   } finally {
     hideLoading();
     statsInited = true;
-    // Setear período por defecto y aplicar
-    const btnDefault = document.querySelector('.period-btn');
-    if (btnDefault) setPeriod('7d', btnDefault);
+    // Período por defecto: "Este mes" (coincide con Facturación)
+    const btnMes = document.querySelector('.period-btn[onclick*="\'mes\'"]');
+    if (btnMes) setPeriod('mes', btnMes);
     aplicarFiltroStats();
   }
 }
