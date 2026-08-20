@@ -2107,8 +2107,22 @@ async function generarRemitoById(id) {
   // Traer datos del cliente (dirección, cuit) desde la tabla clientes
   let cli = null;
   try {
-    const rows = await supa.get('clientes', 'nombre=eq.' + encodeURIComponent(pedido.cliente) + '&select=nombre,direccion,cuit,whatsapp&limit=1');
-    cli = Array.isArray(rows) ? rows[0] : null;
+    const nombrePedido = (pedido.cliente || '').trim();
+    // 1) Intento exacto
+    let rows = await supa.get('clientes', 'nombre=eq.' + encodeURIComponent(nombrePedido) + '&select=nombre,direccion,cuit,whatsapp&limit=1');
+    cli = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    // 2) Si no hay match exacto, buscar por coincidencia parcial (el pedido puede tener
+    //    un nombre más corto que la ficha, ej "Fabri café" vs "Fabri café (Juan Perez)")
+    if (!cli && nombrePedido) {
+      const todos = await supa.get('clientes', 'select=nombre,direccion,cuit,whatsapp');
+      if (Array.isArray(todos)) {
+        const npLow = nombrePedido.toLowerCase();
+        cli = todos.find(c => {
+          const cn = (c.nombre || '').toLowerCase();
+          return cn === npLow || cn.startsWith(npLow) || npLow.startsWith(cn) || cn.includes(npLow) || npLow.includes(cn);
+        }) || null;
+      }
+    }
   } catch (e) { /* si falla, seguimos sin datos extra */ }
 
   const { jsPDF } = window.jspdf;
