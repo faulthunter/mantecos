@@ -2148,6 +2148,8 @@ async function generarRemitoById(id) {
   doc.setFontSize(9);
   doc.setTextColor(...C_MID);
   doc.text('Laminados  ·  Panadería Artesanal', ML, 22);
+  doc.setFontSize(8);
+  doc.text('CUIT 23-35962387-9', W - MR, 15, { align: 'right' });
   doc.setDrawColor(...C_LIGHT);
   doc.setLineWidth(0.4);
   doc.line(ML, 26, W - MR, 26);
