@@ -2099,6 +2099,151 @@ function togglePDFEnvio() {
   document.getElementById('pdf-envio-wrap').style.display = checked ? 'block' : 'none';
 }
 
+// ── REMITO (sin precios, para envío de mercadería) ───────────
+async function generarRemitoById(id) {
+  const pedido = todosPedidos.find(p => p.id === id);
+  if (!pedido) { alert('No se encontró el pedido.'); return; }
+
+  // Traer datos del cliente (dirección, cuit) desde la tabla clientes
+  let cli = null;
+  try {
+    const rows = await supa.get('clientes', 'nombre=eq.' + encodeURIComponent(pedido.cliente) + '&select=nombre,direccion,cuit,whatsapp&limit=1');
+    cli = Array.isArray(rows) ? rows[0] : null;
+  } catch (e) { /* si falla, seguimos sin datos extra */ }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, ML = 16, MR = 16;
+  const TW = W - ML - MR;
+
+  const C_HEADER_BG  = [214, 190, 180];
+  const C_HEADER_TXT = [60, 45, 38];
+  const C_DARK       = [60, 45, 38];
+  const C_MID        = [120, 100, 88];
+  const C_LIGHT      = [200, 182, 172];
+  const C_ROW_ALT    = [250, 246, 243];
+
+  // ── HEADER ──
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(0, 0, W, 38, 'F');
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('La Chica Manteca', ML, 15);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...C_MID);
+  doc.text('Laminados  ·  Panadería Artesanal', ML, 22);
+  doc.setDrawColor(...C_LIGHT);
+  doc.setLineWidth(0.4);
+  doc.line(ML, 26, W - MR, 26);
+  doc.setTextColor(...C_HEADER_TXT);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('REMITO', ML, 33);
+  doc.setFont('helvetica', 'normal');
+  doc.text('N° ' + pedido.id, W / 2, 33, { align: 'center' });
+  doc.text('Emitido: ' + new Date().toLocaleDateString('es-AR'), W - MR, 33, { align: 'right' });
+
+  let y = 50;
+
+  // ── BLOQUE CLIENTE ──
+  doc.setFillColor(...C_HEADER_BG);
+  doc.rect(ML, y, 3, 30, 'F');
+  doc.setTextColor(...C_MID);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CLIENTE', ML + 7, y + 5);
+  doc.setTextColor(...C_DARK);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(pedido.cliente || '-', ML + 7, y + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...C_MID);
+  let yInfo = y + 18;
+  const dir = cli?.direccion?.trim();
+  const cuit = cli?.cuit?.trim();
+  if (dir)  { doc.text('Dirección: ' + dir, ML + 7, yInfo); yInfo += 5; }
+  if (cuit) { doc.text('CUIT / DNI: ' + cuit, ML + 7, yInfo); yInfo += 5; }
+  // Fecha de entrega
+  doc.text('Fecha de entrega: ' + (pedido.fecha || '-'), ML + 7, yInfo); yInfo += 5;
+
+  y = Math.max(y + 34, yInfo + 4);
+
+  // ── TABLA PRODUCTOS (sin precios) ──
+  const xCant = W - MR - 4;
+  doc.setFillColor(...C_DARK);
+  doc.rect(ML, y, TW, 9, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Producto', ML + 3, y + 6);
+  doc.text('Cantidad', xCant, y + 6, { align: 'right' });
+  y += 9;
+
+  const items = pedido.items || [];
+  doc.setFontSize(11);
+  items.forEach((it, i) => {
+    const rowH = 11;
+    if (i % 2 === 1) {
+      doc.setFillColor(...C_ROW_ALT);
+      doc.rect(ML, y, TW, rowH, 'F');
+    }
+    doc.setTextColor(...C_DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(it.nombre || ''), ML + 3, y + 7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(it.cantidad || 0), xCant, y + 7.5, { align: 'right' });
+    doc.setDrawColor(...C_LIGHT);
+    doc.setLineWidth(0.2);
+    doc.line(ML, y + rowH, W - MR, y + rowH);
+    y += rowH;
+  });
+
+  // Total de unidades (informativo, no plata)
+  const totalUnidades = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+  y += 3;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...C_MID);
+  doc.text('Total de unidades: ' + totalUnidades, W - MR, y + 3, { align: 'right' });
+
+  // Observaciones si hay
+  if (pedido.observaciones && pedido.observaciones.trim()) {
+    y += 12;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...C_DARK);
+    doc.text('Observaciones:', ML, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C_MID);
+    const obsLines = doc.splitTextToSize(pedido.observaciones, TW);
+    doc.text(obsLines, ML, y + 5);
+    y += 5 + obsLines.length * 5;
+  }
+
+  // ── FIRMA ──
+  y = Math.max(y + 24, 250);
+  doc.setDrawColor(...C_DARK);
+  doc.setLineWidth(0.3);
+  doc.line(ML, y, ML + 75, y);
+  doc.line(W - MR - 75, y, W - MR, y);
+  doc.setFontSize(8);
+  doc.setTextColor(...C_MID);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Entregado por', ML, y + 5);
+  doc.text('Recibido conforme (firma y aclaración)', W - MR, y + 5, { align: 'right' });
+
+  // Pie
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C_MID);
+  doc.text('Documento no válido como factura. Remito de entrega de mercadería.', W / 2, 288, { align: 'center' });
+
+  doc.save('remito-' + (pedido.cliente || 'pedido').replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+}
+
 function recalcModalPDF() {
   if (!pedidoParaPDF) return;
   const subtotal = (pedidoParaPDF.items || []).reduce((s, it) => s + (Number(it.precio) || 0) * (Number(it.cantidad) || 0), 0);
@@ -3316,6 +3461,7 @@ function pedidoCardHTML(p) {
       <div class="card-actions">
         <button class="action-btn edit"     onclick="abrirEditarById('${p.id}')">✏️ Editar</button>
         <button class="action-btn pdf-btn"  onclick="generarPDFById('${p.id}')">📄 PDF</button>
+        <button class="action-btn pdf-btn"  onclick="generarRemitoById('${p.id}')">📋 Remito</button>
         <button class="action-btn archive"  onclick="archivarPedido('${p.id}')">✅ Cobrado</button>
         <button class="action-btn partial"  onclick="abrirParcial('${p.id}')">📦 Parcial</button>
         <button class="action-btn delete"   onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
