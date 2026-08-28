@@ -4528,6 +4528,13 @@ function setFactPeriodo(p, btn) {
   cargarPedidosFacturacion();
 }
 
+// Devuelve true si el cliente (por nombre) tiene CUIT cargado
+function clienteTieneCuit(nombreCliente) {
+  if (!nombreCliente) return false;
+  const c = (clientes || []).find(x => x.nombre === nombreCliente);
+  return !!(c && c.cuit && String(c.cuit).trim().length > 0);
+}
+
 async function cargarPedidosFacturacion() {
   const desde = document.getElementById('fact-desde').value;
   const hasta  = document.getElementById('fact-hasta').value;
@@ -4535,6 +4542,10 @@ async function cargarPedidosFacturacion() {
   container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Cargando...</div>';
 
   try {
+    // Asegurar que la lista de clientes esté cargada (para el chip CON CUIT)
+    if (!clientes || clientes.length === 0) {
+      try { clientes = await apiGetClientes(); } catch (e) {}
+    }
     // Usar cache o fetchear
     const pedidos = todosPedidos.length > 0 ? todosPedidos : await apiGetPedidos();
     if (todosPedidos.length === 0) todosPedidos = pedidos;
@@ -4617,7 +4628,7 @@ async function cargarPedidosFacturacion() {
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div style="flex:1">
-            <div style="font-size:16px;font-weight:600">${p.cliente}</div>
+            <div style="font-size:16px;font-weight:600">${p.cliente}${clienteTieneCuit(p.cliente) ? ' <span style="font-size:10px;font-weight:700;background:#DBEAFE;color:#1E3A8A;padding:2px 7px;border-radius:20px;vertical-align:middle;white-space:nowrap">CON CUIT</span>' : ''}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:3px">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'} · ${p.id}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px">${estadoBadge(p.estado)}</div>
             ${p.observaciones ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:3px">${p.observaciones}</div>` : ''}
