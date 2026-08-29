@@ -997,6 +997,10 @@ canvas { width: 100% !important; }
     <input type="text" id="edit-cli-direccion" placeholder="Opcional" />
     <label>CUIT <span style="color:var(--muted);font-weight:400;font-size:12px">formato: 20-12345678-9</span></label>
     <input type="text" id="edit-cli-cuit" placeholder="Ej: 20-12345678-9" />
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
+      <input type="checkbox" id="edit-cli-masiva" style="width:auto;margin:0" />
+      <span>A este cliente le cobramos <b>+ IVA 21%</b></span>
+    </label>
     <button class="btn-primary" style="margin-top:16px" onclick="guardarEdicionCliente()">Guardar cambios</button>
     <div class="status" id="status-edit-cliente"></div>
   </div>
@@ -1123,6 +1127,10 @@ canvas { width: 100% !important; }
         <input type="text" id="nuevo-cli-direccion" placeholder="Opcional" />
         <label>CUIT (solo Factura A) <span style="color:var(--muted);font-weight:400">formato: 20-12345678-9</span></label>
         <input type="text" id="nuevo-cli-cuit" placeholder="Ej: 20-12345678-9" />
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
+          <input type="checkbox" id="nuevo-cli-masiva" style="width:auto;margin:0" />
+          <span>A este cliente le cobramos <b>+ IVA 21%</b></span>
+        </label>
         <button class="btn-primary" onclick="agregarCliente()" style="margin-top:12px">+ Agregar</button>
         <div class="status" id="status-cli-nuevo"></div>
       </div>
@@ -1841,8 +1849,8 @@ async function apiEliminarProducto(nombre) {
   return { ok: true };
 }
 
-async function apiAgregarCliente(nombre, whatsapp, direccion, cuit) {
-  await supa.post('clientes', { nombre, whatsapp, direccion, cuit: cuit || '' });
+async function apiAgregarCliente(nombre, whatsapp, direccion, cuit, masIva) {
+  await supa.post('clientes', { nombre, whatsapp, direccion, cuit: cuit || '', mas_iva: !!masIva });
   return { ok: true };
 }
 
@@ -3966,6 +3974,7 @@ function abrirEditarCliente(idx) {
   document.getElementById('edit-cli-whatsapp').value  = c.whatsapp  || '';
   document.getElementById('edit-cli-direccion').value = c.direccion || '';
   document.getElementById('edit-cli-cuit').value      = c.cuit      || '';
+  document.getElementById('edit-cli-masiva').checked  = !!c.mas_iva;
   document.getElementById('status-edit-cliente').className = 'status';
   document.getElementById('modal-editar-cliente').classList.add('open');
 }
@@ -3981,6 +3990,7 @@ async function guardarEdicionCliente() {
   const whatsapp  = document.getElementById('edit-cli-whatsapp').value.trim();
   const direccion = document.getElementById('edit-cli-direccion').value.trim();
   const cuit      = document.getElementById('edit-cli-cuit').value.trim();
+  const masIva    = document.getElementById('edit-cli-masiva').checked;
 
   if (!nombre) { showStatus('status-edit-cliente', 'El nombre es obligatorio.', 'err'); return; }
 
@@ -3988,14 +3998,14 @@ async function guardarEdicionCliente() {
   try {
     // PATCH en Supabase buscando por nombre original
     // Solo incluir cuit en el PATCH si el campo tiene valor — evita pisar un CUIT existente con vacío
-    const patchData = { nombre, whatsapp, direccion };
+    const patchData = { nombre, whatsapp, direccion, mas_iva: masIva };
     if (cuit) patchData.cuit = cuit;
     await supa.patch('clientes',
       `nombre=eq.${encodeURIComponent(clienteEnEdicion.nombreOriginal)}`,
       patchData);
     // Actualizar en memoria — preservar cuit existente si no se cambió
     const cuitFinal = cuit || clientes[clienteEnEdicion.idx].cuit || '';
-    clientes[clienteEnEdicion.idx] = { nombre, whatsapp, direccion, cuit: cuitFinal };
+    clientes[clienteEnEdicion.idx] = { nombre, whatsapp, direccion, cuit: cuitFinal, mas_iva: masIva };
     cacheInvalidate('manteco_clientes');
     // Actualizar selector de nuevo pedido
     const sel = document.getElementById('sel-cliente');
@@ -4019,7 +4029,7 @@ function renderClientes() {
   container.innerHTML = clientes.map((c, i) => `
     <div class="producto-row" id="cli-row-${i}">
       <div style="flex:1">
-        <div class="producto-nombre">${c.nombre}</div>
+        <div class="producto-nombre">${c.nombre}${c.mas_iva ? ' <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:20px;vertical-align:middle">+ IVA</span>' : ''}</div>
         <div style="font-size:12px;color:var(--muted)">${c.whatsapp || ''} ${c.direccion ? '· ' + c.direccion : ''} ${c.cuit ? '· CUIT: ' + c.cuit : ''}</div>
       </div>
       <button class="btn-save-precio" onclick="abrirEditarCliente(${i})" style="margin-right:6px">✏️</button>
@@ -4033,15 +4043,16 @@ async function agregarCliente() {
   const whatsapp  = document.getElementById('nuevo-cli-whatsapp').value.trim();
   const direccion = document.getElementById('nuevo-cli-direccion').value.trim();
   const cuit      = document.getElementById('nuevo-cli-cuit').value.trim();
+  const masIva    = document.getElementById('nuevo-cli-masiva').checked;
   if (!nombre) { showStatus('status-cli-nuevo', 'Ingresá un nombre.', 'err'); return; }
   if (clientes.find(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
     showStatus('status-cli-nuevo', 'Ya existe un cliente con ese nombre.', 'err'); return;
   }
   showLoading('Agregando cliente...');
   try {
-    const res = await apiAgregarCliente(nombre, whatsapp, direccion, cuit);
+    const res = await apiAgregarCliente(nombre, whatsapp, direccion, cuit, masIva);
     if (res.error) throw new Error(res.error);
-    clientes.push({ nombre, whatsapp, direccion, cuit });
+    clientes.push({ nombre, whatsapp, direccion, cuit, mas_iva: masIva });
     cacheInvalidate('manteco_clientes');
     // Actualizar también el select de nuevo pedido
     const sel = document.getElementById('sel-cliente');
@@ -4051,6 +4062,7 @@ async function agregarCliente() {
     document.getElementById('nuevo-cli-whatsapp').value = '';
     document.getElementById('nuevo-cli-direccion').value = '';
     document.getElementById('nuevo-cli-cuit').value = '';
+    document.getElementById('nuevo-cli-masiva').checked = false;
     renderClientes();
     showStatus('status-cli-nuevo', '✓ Cliente agregado', 'ok');
   } catch(e) {
@@ -4535,6 +4547,13 @@ function clienteTieneCuit(nombreCliente) {
   return !!(c && c.cuit && String(c.cuit).trim().length > 0);
 }
 
+// Devuelve true si al cliente se le cobra + IVA 21% (marca interna)
+function clienteMasIva(nombreCliente) {
+  if (!nombreCliente) return false;
+  const c = (clientes || []).find(x => x.nombre === nombreCliente);
+  return !!(c && c.mas_iva);
+}
+
 async function cargarPedidosFacturacion() {
   const desde = document.getElementById('fact-desde').value;
   const hasta  = document.getElementById('fact-hasta').value;
@@ -4628,7 +4647,7 @@ async function cargarPedidosFacturacion() {
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div style="flex:1">
-            <div style="font-size:16px;font-weight:600">${p.cliente}${clienteTieneCuit(p.cliente) ? ' <span style="font-size:10px;font-weight:700;background:#DBEAFE;color:#1E3A8A;padding:2px 7px;border-radius:20px;vertical-align:middle;white-space:nowrap">CON CUIT</span>' : ''}</div>
+            <div style="font-size:16px;font-weight:600">${p.cliente}${clienteTieneCuit(p.cliente) ? ' <span style="font-size:10px;font-weight:700;background:#DBEAFE;color:#1E3A8A;padding:2px 7px;border-radius:20px;vertical-align:middle;white-space:nowrap">CON CUIT</span>' : ''}${clienteMasIva(p.cliente) ? ' <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:2px 7px;border-radius:20px;vertical-align:middle;white-space:nowrap">+ IVA</span>' : ''}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:3px">${p.fecha ? '📅 ' + p.fecha : 'Sin fecha'} · ${p.id}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px">${estadoBadge(p.estado)}</div>
             ${p.observaciones ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:3px">${p.observaciones}</div>` : ''}
@@ -4702,8 +4721,8 @@ function abrirModalFacturar(id) {
     </select>
 
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;margin-top:8px;border-top:1px solid var(--border)">
-      <input type="checkbox" id="fact-check-iva" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="recalcFactTotal(${itemsSubtotal}, ${envio})" />
-      <label for="fact-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Precio de lista no incluye IVA (sumar 21%)</label>
+      <input type="checkbox" id="fact-check-iva" ${clienteMasIva(pedido.cliente) ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="recalcFactTotal(${itemsSubtotal}, ${envio})" />
+      <label for="fact-check-iva" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Precio de lista no incluye IVA (sumar 21%)${clienteMasIva(pedido.cliente) ? ' <span style="color:#92400E;font-weight:700">· cliente + IVA</span>' : ''}</label>
     </div>
 
     <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:13px" id="fact-desglose">
