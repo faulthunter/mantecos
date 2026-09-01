@@ -124,7 +124,10 @@ textarea { resize: none; }
 .action-btn { flex: 1; min-width: 50px; padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 13px; color: var(--muted); cursor: pointer; font-family: inherit; text-align: center; }
 .action-btn.edit:active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
 .action-btn.delete:active { background: var(--error-bg); color: var(--error); border-color: var(--error); }
+.action-btn.pdf-btn { color: #3730A3; border-color: #C7D2FE; }
 .action-btn.pdf-btn:active { background: #EEF2FF; color: #3730A3; border-color: #3730A3; }
+.action-btn.remito-btn { color: #047857; border-color: #A7F3D0; }
+.action-btn.remito-btn:active { background: #ECFDF5; color: #047857; border-color: #047857; }
 .action-btn.archive:active { background: #F5F5F0; color: #555; border-color: #999; }
 .action-btn.partial { color: #1D4ED8; }
 .action-btn.partial:active { background: #EFF6FF; color: #1D4ED8; border-color: #1D4ED8; }
@@ -3485,7 +3488,7 @@ function pedidoCardHTML(p) {
       <div class="card-actions">
         <button class="action-btn edit"     onclick="abrirEditarById('${p.id}')">✏️ Editar</button>
         <button class="action-btn pdf-btn"  onclick="generarPDFById('${p.id}')">📄 PDF</button>
-        <button class="action-btn pdf-btn"  onclick="generarRemitoById('${p.id}')">📋 Remito</button>
+        <button class="action-btn remito-btn"  onclick="generarRemitoById('${p.id}')">📋 Remito</button>
         <button class="action-btn archive"  onclick="archivarPedido('${p.id}')">✅ Cobrado</button>
         <button class="action-btn partial"  onclick="abrirParcial('${p.id}')">📦 Parcial</button>
         <button class="action-btn delete"   onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
