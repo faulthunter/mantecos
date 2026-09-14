@@ -1801,20 +1801,18 @@ async function apiNuevoPedido(cliente, fecha, estado, observaciones, items, envi
   const id = 'P' + Date.now();
   await supa.post('pedidos', { id, cliente, fecha, estado, observaciones, total, envio: envio || 0 });
 
-  // Guardar items. Si alguno falla, borrar el pedido para no dejarlo huérfano (sin productos).
+  // Guardar items. supa.post ya lanza excepción si la inserción falla (r.ok === false).
+  // Si eso ocurre, borramos el pedido para no dejarlo huérfano (con total pero sin productos).
   if (items.length > 0) {
     try {
-      const resultados = await Promise.all(items.map(it =>
+      await Promise.all(items.map(it =>
         supa.post('items_pedido', { pedido_id: id, nombre: it.nombre, cantidad: it.cantidad, precio: it.precio })
       ));
-      // Verificar que cada item se haya insertado (Supabase devuelve el registro creado)
-      const okTodos = Array.isArray(resultados) && resultados.every(r => Array.isArray(r) ? r.length > 0 : !!r);
-      if (!okTodos) throw new Error('No se pudieron guardar todos los productos');
     } catch (e) {
-      // Rollback: borrar el pedido recién creado para no dejar un pedido sin productos
-      try { await supa.delete('pedidos', `id=eq.${id}`); } catch (_) {}
+      // Rollback: borrar el pedido y cualquier item que sí haya entrado
       try { await supa.delete('items_pedido', `pedido_id=eq.${id}`); } catch (_) {}
-      throw new Error('No se pudo guardar el pedido completo (productos). No se guardó nada. Detalle: ' + e.message);
+      try { await supa.delete('pedidos', `id=eq.${id}`); } catch (_) {}
+      throw new Error('No se pudieron guardar los productos del pedido. No se guardó nada, probá de nuevo. Detalle: ' + e.message);
     }
   }
   return { ok: true, idPedido: id, total };
