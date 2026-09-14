@@ -5787,8 +5787,8 @@ async function calcularUnidadesMes() {
   if (!pedidosCache.length) {
     try {
       const [pedidos, items] = await Promise.all([
-        supa.get('pedidos', 'order=id'),
-        supa.get('items_pedido', 'order=pedido_id')
+        supa.getAll('pedidos', 'order=id'),
+        supa.getAll('items_pedido', 'order=pedido_id')
       ]);
       const imap = {};
       items.forEach(it => { if (!imap[it.pedido_id]) imap[it.pedido_id] = []; imap[it.pedido_id].push({ nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio) }); });
@@ -5823,8 +5823,8 @@ async function loadGanancias() {
   if (!pedidosCache.length) {
     try {
       const [pedidos, items] = await Promise.all([
-        supa.get('pedidos', 'order=id'),
-        supa.get('items_pedido', 'order=pedido_id')
+        supa.getAll('pedidos', 'order=id'),
+        supa.getAll('items_pedido', 'order=pedido_id')
       ]);
       const imap = {};
       items.forEach(it => { if (!imap[it.pedido_id]) imap[it.pedido_id] = []; imap[it.pedido_id].push({ nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio) }); });
