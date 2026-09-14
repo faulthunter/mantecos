@@ -1171,6 +1171,24 @@ const supa = {
     return r.json();
   },
 
+  // Trae TODAS las filas paginando de a 1000 (Supabase limita cada request a 1000).
+  // Necesario para tablas grandes como items_pedido.
+  async getAll(table, query = '') {
+    const PAGE = 1000;
+    let desde = 0, todo = [];
+    while (true) {
+      const headers = await this._h({ 'Range-Unit': 'items', 'Range': `${desde}-${desde + PAGE - 1}` });
+      const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${query}`, { headers });
+      if (!r.ok) throw new Error(`Supabase GETALL ${table} falló (${r.status}): ${await r.text()}`);
+      const lote = await r.json();
+      todo = todo.concat(lote);
+      if (lote.length < PAGE) break;   // última página
+      desde += PAGE;
+      if (desde > 100000) break;        // guarda de seguridad
+    }
+    return todo;
+  },
+
   async post(table, body) {
     const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: await this._h(), body: JSON.stringify(body) });
     if (!r.ok) throw new Error(`Supabase POST ${table} falló (${r.status}): ${await r.text()}`);
@@ -1785,8 +1803,8 @@ async function apiGetProductos() {
 
 async function apiGetPedidos() {
   const [pedidos, items] = await Promise.all([
-    supa.get('pedidos', 'order=id'),
-    supa.get('items_pedido', 'order=pedido_id')
+    supa.getAll('pedidos', 'order=id'),
+    supa.getAll('items_pedido', 'order=pedido_id')
   ]);
   const itemsMap = {};
   items.forEach(it => {
