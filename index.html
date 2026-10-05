@@ -928,7 +928,7 @@ canvas { width: 100% !important; }
           </select>
         </div>
       </div>
-      <div id="fact-resumen" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div id="fact-resumen" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
         <div style="background:#D1FAE5;border-radius:var(--radius-sm);padding:10px 12px">
           <div style="font-size:10px;color:#065F46;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Facturado</div>
           <div style="font-size:16px;font-weight:800;color:#065F46;line-height:1.15;margin-top:2px" id="fact-kpi-fact-total">$0</div>
@@ -938,6 +938,11 @@ canvas { width: 100% !important; }
           <div style="font-size:10px;color:#92400E;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Sin facturar</div>
           <div style="font-size:16px;font-weight:800;color:#92400E;line-height:1.15;margin-top:2px" id="fact-kpi-pend-total">$0</div>
           <div style="font-size:11px;color:#92400E;opacity:0.75" id="fact-kpi-pend-count">0 pedidos</div>
+        </div>
+        <div style="background:#E0E7FF;border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:10px;color:#3730A3;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Cuenta 2</div>
+          <div style="font-size:16px;font-weight:800;color:#3730A3;line-height:1.15;margin-top:2px" id="fact-kpi-c2-total">$0</div>
+          <div style="font-size:11px;color:#3730A3;opacity:0.75" id="fact-kpi-c2-count">0 pedidos</div>
         </div>
         <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 12px">
           <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Total período</div>
@@ -1542,11 +1547,26 @@ function renderCobrados() {
   }
 
   const totalPeriodo = cobrados.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  const deCuenta2    = cobrados.filter(p => p.cuenta_cobro === 'secundaria');
+  const totalCta2    = deCuenta2.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  const totalCta1    = totalPeriodo - totalCta2;
 
   container.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:8px">
       <span style="font-size:13px;color:var(--muted)">${cobrados.length} pedidos</span>
       <span style="font-size:15px;font-weight:700;color:var(--accent)">$${Math.round(totalPeriodo).toLocaleString('es-AR')}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:8px 10px">
+        <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Cuenta principal</div>
+        <div style="font-size:15px;font-weight:800;color:var(--accent)">$${Math.round(totalCta1).toLocaleString('es-AR')}</div>
+        <div style="font-size:11px;color:var(--accent);opacity:0.75">${cobrados.length - deCuenta2.length} pedidos</div>
+      </div>
+      <div style="background:#E0E7FF;border-radius:var(--radius-sm);padding:8px 10px">
+        <div style="font-size:10px;color:#3730A3;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Cuenta 2</div>
+        <div style="font-size:15px;font-weight:800;color:#3730A3">$${Math.round(totalCta2).toLocaleString('es-AR')}</div>
+        <div style="font-size:11px;color:#3730A3;opacity:0.75">${deCuenta2.length} pedidos</div>
+      </div>
     </div>
     ${cobrados.map(p => `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
@@ -1557,7 +1577,7 @@ function renderCobrados() {
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:12px">
           <div style="font-size:15px;font-weight:600;color:var(--accent)">$${Math.round(p.total).toLocaleString('es-AR')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:6px">${p.estado}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:6px">${p.estado}${p.cuenta_cobro === 'secundaria' ? ' · <span style="font-size:10px;font-weight:700;background:#E0E7FF;color:#3730A3;padding:1px 6px;border-radius:20px">CUENTA 2</span>' : ''}</div>
           <button onclick="desarchivarPedido('${p.id}')" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit">↩ Desarchivar</button>
         </div>
       </div>
@@ -4666,9 +4686,12 @@ async function cargarPedidosFacturacion() {
 
     const total = pedidosFacturacion.reduce((s, p) => s + (Number(p.total) || 0), 0);
     const facturados      = pedidosFacturacion.filter(p => p.facturado);
-    const sinFacturar     = pedidosFacturacion.filter(p => !p.facturado);
+    // Cuenta 2 = cobrado en la otra cuenta, sin factura. No cuenta como pendiente de facturar.
+    const cuenta2         = pedidosFacturacion.filter(p => !p.facturado && p.cuenta_cobro === 'secundaria');
+    const sinFacturar     = pedidosFacturacion.filter(p => !p.facturado && p.cuenta_cobro !== 'secundaria');
     const totalFacturado  = facturados.reduce((s, p) => s + (Number(p.total) || 0), 0);
     const totalSinFact    = sinFacturar.reduce((s, p) => s + (Number(p.total) || 0), 0);
+    const totalCuenta2    = cuenta2.reduce((s, p) => s + (Number(p.total) || 0), 0);
 
     // Resumen (3 KPIs)
     const resumen = document.getElementById('fact-resumen');
@@ -4677,6 +4700,8 @@ async function cargarPedidosFacturacion() {
     document.getElementById('fact-kpi-fact-count').textContent = facturados.length + (facturados.length === 1 ? ' pedido' : ' pedidos');
     document.getElementById('fact-kpi-pend-total').textContent = '$' + Math.round(totalSinFact).toLocaleString('es-AR');
     document.getElementById('fact-kpi-pend-count').textContent = sinFacturar.length + (sinFacturar.length === 1 ? ' pedido' : ' pedidos');
+    document.getElementById('fact-kpi-c2-total').textContent = '$' + Math.round(totalCuenta2).toLocaleString('es-AR');
+    document.getElementById('fact-kpi-c2-count').textContent = cuenta2.length + (cuenta2.length === 1 ? ' pedido' : ' pedidos');
     document.getElementById('fact-resumen-count').textContent = pedidosFacturacion.length + (pedidosFacturacion.length === 1 ? ' pedido' : ' pedidos');
     document.getElementById('fact-resumen-total').textContent = '$' + Math.round(total).toLocaleString('es-AR');
 
@@ -4698,7 +4723,10 @@ async function cargarPedidosFacturacion() {
             <div style="font-size:16px;font-weight:700;color:var(--accent)">$${Math.round(p.total).toLocaleString('es-AR')}</div>
             ${p.facturado
               ? '<div style="margin-top:6px;display:inline-block;font-size:11px;font-weight:700;background:#D1FAE5;color:#065F46;padding:3px 8px;border-radius:20px">✓ FACTURADO</div><div style=\"font-size:10px;color:var(--muted);margin-top:2px\">CAE: ' + (p.cae || '') + '</div>'
-              : '<button onclick=\"abrirModalFacturar(\'' + p.id + '\')\" style=\"margin-top:8px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit\">🧾 Facturar</button>'
+              : (p.cuenta_cobro === 'secundaria'
+                  ? '<div style=\"margin-top:6px;display:inline-block;font-size:11px;font-weight:700;background:#E0E7FF;color:#3730A3;padding:3px 8px;border-radius:20px\">✓ CUENTA 2</div><div style=\"margin-top:5px\"><button onclick=\"revertirCuenta2(\'' + p.id + '\')\" style=\"padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit\">↩ Volver a facturable</button></div>'
+                  : '<button onclick=\"abrirModalFacturar(\'' + p.id + '\')\" style=\"margin-top:8px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit\">🧾 Facturar</button><div style=\"margin-top:6px\"><button onclick=\"marcarCuenta2(\'' + p.id + '\')\" style=\"padding:5px 10px;border:1px solid #C7D2FE;border-radius:8px;background:#EEF2FF;font-size:12px;font-weight:600;color:#3730A3;cursor:pointer;font-family:inherit\">💰 Cobro cuenta 2</button></div>'
+                )
             }
           </div>
         </div>
@@ -4711,6 +4739,32 @@ async function cargarPedidosFacturacion() {
 
   } catch(e) {
     container.innerHTML = `<div style="color:var(--error);font-size:13px;text-align:center;padding:24px">Error: ${e.message}</div>`;
+  }
+}
+
+// ── CUENTA DE COBRO (cuenta 2: cobrado sin factura) ──────────────
+async function marcarCuenta2(id) {
+  const p = todosPedidos.find(x => x.id === id) || pedidosFacturacion.find(x => x.id === id);
+  const monto = p ? '$' + Math.round(Number(p.total) || 0).toLocaleString('es-AR') : '';
+  if (!confirm('Marcar este pedido (' + monto + ') como cobrado en la CUENTA 2?\n\nNo se emite factura y sale del total a facturar.')) return;
+  await setCuentaCobro(id, 'secundaria');
+}
+
+async function revertirCuenta2(id) {
+  await setCuentaCobro(id, null);
+}
+
+async function setCuentaCobro(id, valor) {
+  try {
+    showLoading(valor ? 'Marcando cuenta 2...' : 'Volviendo a facturable...');
+    await supa.patch('pedidos', 'id=eq.' + encodeURIComponent(id), { cuenta_cobro: valor });
+    const p1 = todosPedidos.find(x => x.id === id);          if (p1) p1.cuenta_cobro = valor;
+    const p2 = pedidosFacturacion.find(x => x.id === id);    if (p2) p2.cuenta_cobro = valor;
+    hideLoading();
+    await cargarPedidosFacturacion();
+  } catch (e) {
+    hideLoading();
+    alert('No se pudo actualizar la cuenta: ' + e.message);
   }
 }
 
