@@ -71,7 +71,7 @@ export default async function handler(req, res) {
     if (pedidoId && !esNC) {
       try {
         const dupRes = await fetch(
-          `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&anulada=eq.false&es_nota_credito=eq.false&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url`,
+          `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}&anulada=eq.false&es_nota_credito=eq.false&select=id,nro,tipo,cae,cae_vto,total,punto_venta,pdf_url,fecha_emision`,
           { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}` } }
         );
         if (dupRes.ok) {
@@ -212,7 +212,8 @@ export default async function handler(req, res) {
 
     // Mapas legibles
     const condIvaStr = { RI:'Responsable Inscripto', EX:'Exento', CF:'Consumidor Final', MONO:'Monotributista' };
-    const templateName = tipo === 'A' ? 'invoice-a' : 'invoice-b';
+    // Nota de credito usa su propia plantilla: si no, el PDF sale impreso como FACTURA
+    const templateName = (esNC ? 'credit-note-' : 'invoice-') + (tipo === 'A' ? 'a' : 'b');
 
     // Para Factura A: consultar razón social y domicilio del padrón AFIP
     let receiverName    = tipo === 'A' ? String(req.body.cliente || cuitCliente || '-') : 'CONSUMIDOR FINAL';
@@ -311,6 +312,17 @@ export default async function handler(req, res) {
       baseParams.vat_breakdown      = [{ vat_rate_id: 5, taxable_base: neto, vat_subtotal: ivaAmt }];
     }
 
+    // La NC debe declarar el comprobante que anula (igual que en el CbtesAsoc de AFIP)
+    if (esNC && facturaOriginal) {
+      baseParams.associated_vouchers = [{
+        voucher_type:   facturaOriginal.tipo === 'A' ? 1 : 6,
+        point_of_sale:  Number(facturaOriginal.punto_venta || ptoVta),
+        voucher_number: Number(facturaOriginal.nro),
+        ...(facturaOriginal.fecha_emision ? { issue_date: fmtDate(facturaOriginal.fecha_emision) } : {}),
+      }];
+      baseParams.credit_note_reason = 'Anulacion de comprobante';
+    }
+
     // Nombre del archivo: factura-{tipo}-{nro con ceros}-{razón social slug}.pdf
     const razonSlug = receiverName
       .normalize('NFD').replace(/[̀-ͯ]/g, '') // quitar tildes
@@ -329,6 +341,7 @@ export default async function handler(req, res) {
     // ── 1. GUARDAR FACTURA EN SUPABASE (antes del PDF) ─────────
     // Así si el PDF falla, la factura ya quedó registrada y no se emite de nuevo
     let pdfUrlFinal = '';
+    let facturaRowId = null;   // id de ESTA fila: el PDF se asocia solo a ella
     const facturaPayload = {
       pedido_id:    String(pedidoId),
       cliente:      String(req.body.cliente  || ''),
@@ -351,7 +364,7 @@ export default async function handler(req, res) {
           'apikey': SUPA_ANON,
           'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify(facturaPayload)
       });
@@ -359,7 +372,9 @@ export default async function handler(req, res) {
         const errText = await saveRes.text();
         console.error('Supabase error guardando factura:', saveRes.status, errText);
       } else {
-        console.log('Factura guardada en Supabase OK');
+        const saved = await saveRes.json().catch(() => null);
+        facturaRowId = Array.isArray(saved) && saved[0] ? saved[0].id : null;
+        console.log('Factura guardada en Supabase OK (id ' + facturaRowId + ')');
       }
     } catch(saveErr) {
       console.error('Error guardando factura en Supabase:', saveErr.message);
@@ -424,11 +439,12 @@ export default async function handler(req, res) {
         console.error('Error upload PDF:', uploadErr.message);
       }
 
-      // Actualizar pdf_url en Supabase
-      if (pdfUrlFinal && pedidoId) {
+      // Actualizar pdf_url SOLO en la fila de este comprobante (por id).
+      // Patchear por pedido_id pisaba el PDF de la factura, su NC y la refacturacion.
+      if (pdfUrlFinal && facturaRowId) {
         try {
           await fetch(
-            `${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}`,
+            `${SUPA_URL}/rest/v1/facturas?id=eq.${encodeURIComponent(facturaRowId)}`,
             {
               method: 'PATCH',
               headers: {

@@ -5124,10 +5124,12 @@ async function cargarHistorialFacturas() {
       return;
     }
 
-    const totalFacturado = facturas.reduce((s, f) => s + (Number(f.total) || 0), 0);
+    // El total neto ignora las anuladas y sus notas de credito (se cancelan entre si)
+    const vigentes = facturas.filter(f => !f.anulada && !f.es_nota_credito);
+    const totalFacturado = vigentes.reduce((s, f) => s + (Number(f.total) || 0), 0);
     document.getElementById('hist-kpis').style.display = 'grid';
     document.getElementById('hist-kpi-total').textContent = '$' + Math.round(totalFacturado).toLocaleString('es-AR');
-    document.getElementById('hist-kpi-count').textContent = facturas.length;
+    document.getElementById('hist-kpi-count').textContent = vigentes.length + (facturas.length !== vigentes.length ? ' (+' + (facturas.length - vigentes.length) + ')' : '');
 
     container.innerHTML = facturas.map(f => {
       const esNC = f.es_nota_credito;

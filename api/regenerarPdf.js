@@ -54,7 +54,10 @@ export default async function handler(req, res) {
   try {
     const {
       pedidoId, tipo, nro, cae, caeVto,
-      cliente, cuitCliente, condicionIva, total, conIva, items
+      cliente, cuitCliente, condicionIva, total, conIva, items,
+      facturaId,      // id de la fila en `facturas`: el PDF se asocia SOLO a ella
+      esNC,           // true = nota de credito (usa plantilla credit-note-*)
+      asociado,       // { tipo, punto_venta, nro, fecha_emision } del comprobante que anula
     } = req.body;
     if (!cae || !nro) {
       return res.status(400).json({ error: 'Faltan CAE o número de comprobante — no se puede regenerar sin una factura ya emitida' });
@@ -71,7 +74,7 @@ export default async function handler(req, res) {
     });
 
     // Recalcular neto/iva igual que en facturar.js, a partir del total ya emitido
-    const ptoVta  = 10;
+    const ptoVta  = Number(req.body.puntoVenta) || 10;
     const docTipo = tipo === 'A' ? 80 : 99;
     const docNro  = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
@@ -98,7 +101,7 @@ export default async function handler(req, res) {
     const fechaVtoCae  = fmtDate(caeVto);
 
     const condIvaStr = { RI: 'Responsable Inscripto', EX: 'Exento', CF: 'Consumidor Final', MONO: 'Monotributista' };
-    const templateName = tipo === 'A' ? 'invoice-a' : 'invoice-b';
+    const templateName = (esNC ? 'credit-note-' : 'invoice-') + (tipo === 'A' ? 'a' : 'b');
 
     let receiverName = tipo === 'A' ? String(cliente || cuitCliente || '-') : 'CONSUMIDOR FINAL';
     const receiverAddress = '-';
@@ -153,7 +156,17 @@ export default async function handler(req, res) {
       baseParams.vat_breakdown = [{ vat_rate_id: 5, taxable_base: neto, vat_subtotal: ivaAmt }];
     }
 
-    const fileName = `factura-${tipo}-${nro}.pdf`;
+    if (esNC && asociado) {
+      baseParams.associated_vouchers = [{
+        voucher_type:   asociado.tipo === 'A' ? 1 : 6,
+        point_of_sale:  Number(asociado.punto_venta || ptoVta),
+        voucher_number: Number(asociado.nro),
+        ...(asociado.fecha_emision ? { issue_date: fmtDate(asociado.fecha_emision) } : {}),
+      }];
+      baseParams.credit_note_reason = 'Anulacion de comprobante';
+    }
+
+    const fileName = `${esNC ? 'notacredito' : 'factura'}-${tipo}-${nro}.pdf`;
     const pdfData = { file_name: fileName, template: { name: templateName, params: baseParams } };
 
     console.log('Regenerando PDF (sin tocar AFIP):', JSON.stringify(pdfData, null, 2));
@@ -193,9 +206,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // Actualizar pdf_url en la tabla facturas
-    if (pedidoId) {
-      await fetch(`${SUPA_URL}/rest/v1/facturas?pedido_id=eq.${encodeURIComponent(pedidoId)}`, {
+    // Actualizar pdf_url SOLO en la fila de este comprobante (por id).
+    // Patchear por pedido_id pisaba el PDF de la factura, su NC y la refacturacion.
+    const filtroFila = facturaId
+      ? `id=eq.${encodeURIComponent(facturaId)}`
+      : (pedidoId ? `pedido_id=eq.${encodeURIComponent(pedidoId)}` : '');
+    if (filtroFila) {
+      await fetch(`${SUPA_URL}/rest/v1/facturas?${filtroFila}`, {
         method: 'PATCH',
         headers: {
           'apikey': SUPA_ANON, 'Authorization': `Bearer ${userToken}`,
