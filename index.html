@@ -5041,6 +5041,27 @@ async function cancelarFactura(facturaId) {
   // El importe base (impTotal) que espera el endpoint es el subtotal de items sin envío
   const itemsSubtotal = items.reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
 
+  // La NC tiene que salir por EL MISMO importe que la factura que anula. El pedido pudo
+  // haber cambiado después de facturar (se agregó envío, se corrigió un precio), así que
+  // el envío de la NC se deduce del total original en vez de copiarse del pedido.
+  const factorIva   = f.con_iva ? 1.21 : 1;
+  const aporteItems = Math.round(itemsSubtotal * factorIva * 100) / 100;
+  const envioNC     = Math.round((Number(f.total || 0) - aporteItems) * 100) / 100;
+  if (envioNC < -1) {
+    alert('No se puede emitir la NC automáticamente: los items del pedido ($' +
+      Math.round(aporteItems).toLocaleString('es-AR') + ') ya suman más que la factura ($' +
+      Math.round(f.total || 0).toLocaleString('es-AR') + '). El pedido se modificó después de facturar.');
+    return;
+  }
+
+  // CUIT del cliente: la NC de una Factura A lo necesita sí o sí (el pedido no lo guarda)
+  const cliNC = (clientes || []).find(c => c.nombre === f.cliente);
+  const cuitNC = (cliNC && cliNC.cuit) || '';
+  if (f.tipo === 'A' && !cuitNC) {
+    alert('El cliente ' + (f.cliente || '-') + ' no tiene CUIT cargado y la nota de crédito A lo exige. Cargáselo en Configuración > Clientes y volvé a intentar.');
+    return;
+  }
+
   const btnMsg = document.getElementById('lista-historial-facturas');
   try {
     const session = await supabaseAuth.auth.getSession();
@@ -5053,12 +5074,12 @@ async function cancelarFactura(facturaId) {
       body: JSON.stringify({
         modo: 'nota_credito',
         tipo: f.tipo,
-        cuitCliente: pedido?.cuit || '',
+        cuitCliente: cuitNC,
         // La condición IVA del receptor depende del TIPO de comprobante, no de con_iva:
         // NC-A → receptor RI (obligatorio) · NC-B → Consumidor Final
         condicionIva: f.tipo === 'A' ? 'RI' : 'CF',
         impTotal: itemsSubtotal,
-        envio,
+        envio: Math.max(0, envioNC),
         conIva: !!f.con_iva,
         puntoVenta: f.punto_venta || 10,
         pedidoId: f.pedido_id,
