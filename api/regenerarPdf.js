@@ -150,7 +150,7 @@ export default async function handler(req, res) {
       baseParams.net_amount_taxed = neto;
       baseParams.net_amount_untaxed = 0;
       baseParams.exempt_amount = 0;
-      baseParams.vat_breakdown = [{ vat_rate_id: 21, taxable_base: neto, vat_subtotal: ivaAmt }];
+      baseParams.vat_breakdown = [{ vat_rate_id: 5, taxable_base: neto, vat_subtotal: ivaAmt }];
     }
 
     const fileName = `factura-${tipo}-${nro}.pdf`;
