@@ -162,8 +162,16 @@ export default async function handler(req, res) {
     try {
       pdfResult = await afip.ElectronicBilling.createPDF(pdfData);
     } catch(pdfErr) {
-      console.error('createPDF error body:', JSON.stringify(pdfErr.response?.data, null, 2));
-      throw new Error('createPDF 400: ' + JSON.stringify(pdfErr.response?.data));
+      // El SDK envuelve el error: los datos de la respuesta quedan en el propio error
+      // (Object.assign(new Error(statusText), error.response)), no siempre en .response
+      const detalle = {
+        message:    pdfErr.message,
+        status:     pdfErr.status     || pdfErr.response?.status,
+        statusText: pdfErr.statusText || pdfErr.response?.statusText,
+        data:       pdfErr.data       || pdfErr.response?.data,
+      };
+      console.error('createPDF error:', JSON.stringify(detalle));
+      throw new Error('createPDF: ' + JSON.stringify(detalle));
     }
     console.log('PDF temporal regenerado:', pdfResult.file);
 
