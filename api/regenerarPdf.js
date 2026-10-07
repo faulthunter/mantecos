@@ -78,19 +78,23 @@ export default async function handler(req, res) {
     const docTipo = tipo === 'A' ? 80 : 99;
     const docNro  = tipo === 'A' ? parseInt((cuitCliente || '').replace(/[-]/g, '')) : 0;
 
+    // MISMO criterio que facturar.js: con IVA tildado los items van sin IVA (se les
+    // suma 21%) y el envio se toma con IVA incluido (se divide por 1.21).
+    // Si no, el neto/IVA del PDF no coincide con lo que se declaro ante AFIP.
     const itemsSubtotal = (items || []).reduce((s, it) => s + Number(it.precio) * Number(it.cantidad), 0);
     const envio = Number(req.body.envio) || 0;
-    const baseConEnvio = itemsSubtotal + envio;
-    let netoTotal, ivaTotal;
+    let netoItems, ivaItems;
     if (conIva) {
-      netoTotal = baseConEnvio;
-      ivaTotal  = Math.round(baseConEnvio * 0.21 * 100) / 100;
+      netoItems = itemsSubtotal;
+      ivaItems  = Math.round(itemsSubtotal * 0.21 * 100) / 100;
     } else {
-      netoTotal = Math.round(baseConEnvio / 1.21 * 100) / 100;
-      ivaTotal  = Math.round((baseConEnvio - netoTotal) * 100) / 100;
+      netoItems = Math.round(itemsSubtotal / 1.21 * 100) / 100;
+      ivaItems  = Math.round((itemsSubtotal - netoItems) * 100) / 100;
     }
-    const neto   = Math.round(netoTotal * 100) / 100;
-    const ivaAmt = Math.round(ivaTotal * 100) / 100;
+    const netoEnvio = envio > 0 ? Math.round(envio / 1.21 * 100) / 100 : 0;
+    const ivaEnvio  = envio > 0 ? Math.round((envio - netoEnvio) * 100) / 100 : 0;
+    const neto   = Math.round((netoItems + netoEnvio) * 100) / 100;
+    const ivaAmt = Math.round((ivaItems + ivaEnvio) * 100) / 100;
 
     const fmtDate = (str) => {
       const s = String(str).replace(/-/g, '');
