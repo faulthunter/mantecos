@@ -444,7 +444,7 @@ canvas { width: 100% !important; }
       <label for="pdf-check-envio" style="margin:0;font-size:14px;color:var(--text);cursor:pointer">Agregar costo de envío</label>
     </div>
     <div id="pdf-envio-wrap" style="display:none;padding:10px 0 4px">
-      <input type="number" id="pdf-envio-monto" placeholder="0" min="0" value="0" oninput="recalcModalPDF()" />
+      <input type="number" id="pdf-envio-monto" placeholder="0" min="0" value="0" oninput="pdfEnvioTocado = true; recalcModalPDF()" />
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -2142,11 +2142,16 @@ function toggleEnvio() {
 }
 
 let pedidoParaPDF = null;
+let pdfEnvioTocado = false;   // true solo si se toco el envio dentro del modal de PDF
 
-function generarPDFById(id) {
-  const pedido = todosPedidos.find(p => p.id === id);
+async function generarPDFById(id) {
+  let pedido = todosPedidos.find(p => p.id === id);
   if (!pedido) { alert('No se encontró el pedido.'); return; }
+  showLoading();
+  pedido = (await refrescarPedidoDesdeDB(id)) || pedido;
+  hideLoading();
   pedidoParaPDF = pedido;
+  pdfEnvioTocado = false;   // el envio solo se guarda si el usuario lo toca en este modal
   // Pre-cargar envío guardado
   const tieneEnvio = pedido.envio && pedido.envio > 0;
   document.getElementById('pdf-check-envio').checked = tieneEnvio;
@@ -2158,6 +2163,7 @@ function generarPDFById(id) {
 }
 
 function togglePDFEnvio() {
+  pdfEnvioTocado = true;
   const checked = document.getElementById('pdf-check-envio').checked;
   document.getElementById('pdf-envio-wrap').style.display = checked ? 'block' : 'none';
 }
@@ -2354,8 +2360,10 @@ function confirmarGenerarPDF() {
   // Generar PDF con opciones del modal
   generarPDFConOpciones(pedido, checkEnvio, envioMonto, checkIva);
 
-  // Guardar el envío en el pedido si cambió (el IVA NO se guarda: es solo para el PDF)
-  persistirEnvioPedido(pedido.id, envioFinal);
+  // Guardar el envío solo si se tocó acá (el IVA NO se guarda: es solo para el PDF).
+  // Antes, generar el PDF reescribía el envío del pedido con lo que mostrara el modal:
+  // con la cache vieja lo dejaba en 0 sin que nadie lo tocara.
+  if (pdfEnvioTocado) persistirEnvioPedido(pedido.id, envioFinal);
 }
 
 async function persistirEnvioPedido(id, envioFinal) {
@@ -3655,9 +3663,34 @@ async function eliminarPedido(id) {
 }
 
 // ── EDITAR PEDIDO ─────────────────────────────────────────────
-function abrirEditarById(id) {
-  const pedido = todosPedidos.find(p => p.id === id);
+// Trae el pedido y sus items directo de la base y actualiza la cache.
+// La cache local se desactualiza si el pedido se tocó desde otra compu o en otra
+// pestaña, y abrir un modal con datos viejos termina pisando el envío al guardar.
+async function refrescarPedidoDesdeDB(id) {
+  try {
+    const rows = await supa.get('pedidos', 'id=eq.' + encodeURIComponent(id) + '&select=*,items_pedido(*)');
+    const fresco = Array.isArray(rows) ? rows[0] : null;
+    if (!fresco) return null;
+    const items = (fresco.items_pedido || []).map(it => ({
+      nombre: it.nombre, cantidad: it.cantidad, precio: Number(it.precio)
+    }));
+    const p = todosPedidos.find(x => x.id === id);
+    if (!p) return { ...fresco, total: Number(fresco.total), envio: Number(fresco.envio) || 0, items };
+    Object.assign(p, fresco, { total: Number(fresco.total), envio: Number(fresco.envio) || 0, items });
+    delete p.items_pedido;
+    return p;
+  } catch (e) {
+    console.warn('No se pudo refrescar el pedido desde la base:', e.message);
+    return null;
+  }
+}
+
+async function abrirEditarById(id) {
+  let pedido = todosPedidos.find(p => p.id === id);
   if (!pedido) { alert('No se encontró el pedido.'); return; }
+  showLoading();
+  pedido = (await refrescarPedidoDesdeDB(id)) || pedido;
+  hideLoading();
   abrirEditar(pedido);
 }
 
