@@ -813,9 +813,13 @@ canvas { width: 100% !important; }
           <div><label style="margin-top:0">Alquiler</label><input type="number" id="cf-alquiler" placeholder="0" min="0" oninput="actualizarCostoFijoPreview()" /></div>
           <div><label style="margin-top:0">Servicios</label><input type="number" id="cf-servicios" placeholder="0" min="0" oninput="actualizarCostoFijoPreview()" /></div>
         </div>
-        <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin:12px 0;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;color:var(--muted)">Costo fijo por unidad este mes</span>
-          <span style="font-size:18px;font-weight:700;color:var(--accent)" id="cf-por-unidad">$—</span>
+        <div style="margin-top:12px">
+          <label style="margin-top:0">Mes para prorratear</label>
+          <select id="cf-mes" onchange="cambiarMesCF()" style="font-size:14px;padding:8px 10px"></select>
+        </div>
+        <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:10px 14px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span style="font-size:13px;color:var(--muted)" id="cf-mes-label">Costo fijo por unidad este mes</span>
+          <span style="font-size:18px;font-weight:700;color:var(--accent);white-space:nowrap" id="cf-por-unidad">$—</span>
         </div>
         <button class="btn-primary" id="btn-guardar-cf" onclick="guardarCostosFijos()">Guardar costos fijos</button>
         <div class="status" id="status-cf"></div>
@@ -5839,6 +5843,30 @@ function updateHeaderSub() {
 // ══════════════════════════════════════════════════════════════
 let costosFijosCache = { sueldos: 0, alquiler: 0, servicios: 0 };
 let unidadesMesCache = 0;
+let unidadesPorMesCache = {};    // { '2026-10': 412, ... } unidades cobradas por mes
+let cfMesSeleccionado = null;    // 'YYYY-MM' que se usa para prorratear los costos fijos
+
+function nombreMesCF(clave) {
+  const partes = String(clave).split('-');
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return (meses[Number(partes[1]) - 1] || clave) + ' ' + partes[0];
+}
+
+function poblarSelectorMesesCF() {
+  const sel = document.getElementById('cf-mes');
+  if (!sel) return;
+  const meses = Object.keys(unidadesPorMesCache).sort().reverse().slice(0, 24);
+  sel.innerHTML = meses.map(m =>
+    '<option value="' + m + '"' + (m === cfMesSeleccionado ? ' selected' : '') + '>'
+    + nombreMesCF(m) + ' — ' + unidadesPorMesCache[m] + ' u.</option>'
+  ).join('');
+}
+
+function cambiarMesCF() {
+  cfMesSeleccionado = document.getElementById('cf-mes').value;
+  unidadesMesCache = unidadesPorMesCache[cfMesSeleccionado] || 0;
+  actualizarCostoFijoPreview();
+}
 
 async function loadCostosFijos() {
   try {
@@ -5864,10 +5892,12 @@ function getCostoFijoPorUnidad() {
 
 function actualizarCostoFijoPreview() {
   const cfPorUnidad = getCostoFijoPorUnidad();
+  const lbl = document.getElementById('cf-mes-label');
+  if (lbl) lbl.textContent = 'Costo fijo por unidad en ' + (cfMesSeleccionado ? nombreMesCF(cfMesSeleccionado) : 'este mes');
   document.getElementById('cf-por-unidad').textContent =
     unidadesMesCache > 0
-      ? '$' + cfPorUnidad.toFixed(2) + ' (' + unidadesMesCache + ' u. este mes)'
-      : 'Cargando unidades...';
+      ? '$' + cfPorUnidad.toFixed(2) + ' (' + unidadesMesCache + ' u.)'
+      : (cfMesSeleccionado ? 'Sin unidades cobradas' : 'Cargando unidades...');
   renderCostos();
 }
 
@@ -5906,20 +5936,21 @@ async function calcularUnidadesMes() {
       pedidosCache = Array.isArray(p) ? p : [];
     } catch(e) { return; }
   }
-  const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const finMes    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-  finMes.setHours(23,59,59);
-
-  let total = 0;
+  // Unidades cobradas agrupadas por mes (la fecha ya viene como YYYY-MM-DD)
+  unidadesPorMesCache = {};
   pedidosCache.forEach(p => {
-    if (p.estado !== 'Cobrado') return;
-    if (!p.fecha) return;
-    const fecha = new Date(p.fecha);
-    if (fecha < inicioMes || fecha > finMes) return;
-    (p.items || []).forEach(item => { total += item.cantidad; });
+    if (p.estado !== 'Cobrado' || !p.fecha) return;
+    const clave = String(p.fecha).slice(0, 7);
+    const unidades = (p.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+    unidadesPorMesCache[clave] = (unidadesPorMesCache[clave] || 0) + unidades;
   });
-  unidadesMesCache = total;
+
+  const mesActual = fechaARG().slice(0, 7);
+  if (!(mesActual in unidadesPorMesCache)) unidadesPorMesCache[mesActual] = 0;
+  if (!cfMesSeleccionado || !(cfMesSeleccionado in unidadesPorMesCache)) cfMesSeleccionado = mesActual;
+
+  poblarSelectorMesesCF();
+  unidadesMesCache = unidadesPorMesCache[cfMesSeleccionado] || 0;
   actualizarCostoFijoPreview();
 }
 
