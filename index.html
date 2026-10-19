@@ -5738,8 +5738,12 @@ function renderCostos() {
   el.innerHTML = recetasConProducto.map(rec => {
     const costoMasa = calcularCostoReceta(rec);
     const costoRecetaUnit = costoMasa / rec.rendimiento;
-    const costoUnit = costoRecetaUnit + cfPorUnidad;
     const prodData = productosCache.find(p => p.nombre === rec.producto);
+    // Si el producto es una caja de 20, carga 20 veces el costo fijo unitario:
+    // adentro hay 20 unidades producidas, no una.
+    const uxCaja = prodData && Number(prodData.unidades_por_caja) > 0 ? Number(prodData.unidades_por_caja) : 1;
+    const fijosProducto = cfPorUnidad * uxCaja;
+    const costoUnit = costoRecetaUnit + fijosProducto;
     const precioVenta = prodData ? prodData.precio : 0;
     const ganancia = precioVenta - costoUnit;
     const margen = precioVenta > 0 ? (ganancia / precioVenta * 100) : 0;
@@ -5749,9 +5753,9 @@ function renderCostos() {
     if (margen >= 60) { margenClass = 'verde'; margenLabel = '✓ Bueno'; }
     else if (margen >= 40) { margenClass = 'amarillo'; margenLabel = '~ Regular'; }
 
-    const costoStr = costoUnit > 0 ? '$' + costoUnit.toFixed(2) : '—';
+    const costoStr = costoUnit > 0 ? '$' + Math.round(costoUnit).toLocaleString('es-AR') : '—';
     const ventaStr = precioVenta > 0 ? '$' + precioVenta.toLocaleString('es-AR') : 'Sin precio';
-    const gananciaStr = precioVenta > 0 && costoUnit > 0 ? '$' + ganancia.toFixed(2) : '—';
+    const gananciaStr = precioVenta > 0 && costoUnit > 0 ? '$' + Math.round(ganancia).toLocaleString('es-AR') : '—';
     const margenStr = precioVenta > 0 && costoUnit > 0 ? margen.toFixed(0) + '%' : '—';
 
     return `
@@ -5777,7 +5781,7 @@ function renderCostos() {
           <div style="font-size:16px;font-weight:700;color:var(--success)">${gananciaStr}</div>
         </div>
       </div>
-      ${cfPorUnidad > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">Receta: <strong>$${costoRecetaUnit.toFixed(0)}</strong> + Fijos: <strong>$${cfPorUnidad.toFixed(0)}</strong> = Costo total: <strong>$${costoUnit.toFixed(0)}</strong></div>` : ''}
+      ${cfPorUnidad > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">Receta: <strong>$${Math.round(costoRecetaUnit).toLocaleString('es-AR')}</strong> + Fijos: <strong>$${Math.round(fijosProducto).toLocaleString('es-AR')}</strong>${uxCaja > 1 ? ` <span style="opacity:0.8">(${uxCaja} u. × $${Math.round(cfPorUnidad)})</span>` : ''} = Costo total: <strong>$${Math.round(costoUnit).toLocaleString('es-AR')}</strong></div>` : ''}
       ${precioVenta > 0 && costoUnit > 0 ? `
       <div style="font-size:12px;color:var(--muted)">
         Punto de equilibrio: <strong>${Math.ceil(costoMasa / precioVenta)} unidades</strong>
