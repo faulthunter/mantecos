@@ -5983,9 +5983,13 @@ async function calcularUnidadesMes() {
   };
 
   // Unidades cobradas agrupadas por mes (la fecha ya viene como YYYY-MM-DD)
+  // Cuenta lo PRODUCIDO, no lo cobrado: los costos fijos se pagan al producir,
+  // aunque el pedido todavia no se haya cobrado. Quedan afuera los pedidos que
+  // aun no se hicieron (Nuevo / Produccion) y los marcados "sin contar".
+  const ESTADOS_PRODUCIDOS = ['Listo', 'Entregado', 'Cobrado', 'Archivado'];
   unidadesPorMesCache = {};
   pedidosCache.forEach(p => {
-    if (p.estado !== 'Cobrado' || !p.fecha) return;
+    if (!ESTADOS_PRODUCIDOS.includes(p.estado) || p.no_contabilizar || !p.fecha) return;
     const clave = String(p.fecha).slice(0, 7);
     const unidades = (p.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0) * unidadesPorCaja(it.nombre), 0);
     unidadesPorMesCache[clave] = (unidadesPorMesCache[clave] || 0) + unidades;
