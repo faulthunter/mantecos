@@ -5281,7 +5281,7 @@ async function apiGetIngredientes() { return await supa.get('ingredientes', 'ord
 async function apiGetRecetas() {
   const [recetas, items] = await Promise.all([supa.get('recetas','order=nombre'), supa.get('receta_items','order=receta_id')]);
   const map = {};
-  items.forEach(it => { if (!map[it.receta_id]) map[it.receta_id] = []; map[it.receta_id].push({ nombre: it.nombre, gramos: Number(it.gramos) }); });
+  items.forEach(it => { if (!map[it.receta_id]) map[it.receta_id] = []; map[it.receta_id].push({ nombre: it.nombre, gramos: Number(it.gramos), tipo: it.tipo || 'ingrediente', receta_ref: it.receta_ref || null }); });
   return recetas.map(r => ({ ...r, rendimiento: Number(r.rendimiento), ingredientes: map[r.id] || [] }));
 }
 async function apiAgregarIngrediente(nombre, precio, unidad) { await supa.post('ingredientes', { nombre, precio, unidad }); return { ok: true }; }
@@ -5290,13 +5290,13 @@ async function apiEliminarIngrediente(nombre) { await supa.delete('ingredientes'
 async function apiNuevaReceta(nombre, producto, rendimiento, ingredientes) {
   const id = 'R' + Date.now();
   await supa.post('recetas', { id, nombre, producto, rendimiento });
-  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos })));
+  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos, tipo: ing.tipo || 'ingrediente', receta_ref: ing.receta_ref || null })));
   return { ok: true, id };
 }
 async function apiEditarReceta(id, nombre, producto, rendimiento, ingredientes) {
   await supa.patch('recetas', `id=eq.${id}`, { nombre, producto, rendimiento });
   await supa.delete('receta_items', `receta_id=eq.${id}`);
-  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos })));
+  if (ingredientes.length > 0) await Promise.all(ingredientes.map(ing => supa.post('receta_items', { receta_id: id, nombre: ing.nombre, gramos: ing.gramos, tipo: ing.tipo || 'ingrediente', receta_ref: ing.receta_ref || null })));
   return { ok: true };
 }
 async function apiEliminarReceta(id) { await supa.delete('receta_items', `receta_id=eq.${id}`); await supa.delete('recetas', `id=eq.${id}`); return { ok: true }; }
@@ -5517,7 +5517,7 @@ function abrirEditarReceta(id) {
     productosCache.map(p => `<option value="${p.nombre}"${p.nombre === receta.producto ? ' selected' : ''}>${p.nombre}</option>`).join('');
 
   document.getElementById('receta-ing-container').innerHTML = '';
-  receta.ingredientes.forEach(ing => addRecetaIng(ing.nombre, ing.gramos));
+  receta.ingredientes.forEach(ing => addRecetaIng(ing.nombre, ing.gramos, ing.tipo, ing.receta_ref));
   if (!receta.ingredientes.length) addRecetaIng();
 
   updatePreviewCosto();
@@ -5528,19 +5528,29 @@ function cerrarModalReceta() {
   document.getElementById('modal-receta').classList.remove('open');
 }
 
-function addRecetaIng(nombre = '', gramos = '') {
+function addRecetaIng(nombre = '', gramos = '', tipo = 'ingrediente', receta_ref = null) {
   const container = document.getElementById('receta-ing-container');
   const div = document.createElement('div');
   div.className = 'receta-ing-row';
 
-  const opts = ingredientesCache.map(ing =>
-    `<option value="${ing.nombre}"${ing.nombre === nombre ? ' selected' : ''}>${ing.nombre} (${ing.unidad})</option>`
+  const valorActual = tipo === 'receta' ? ('rec:' + receta_ref) : ('ing:' + nombre);
+
+  const optsIng = ingredientesCache.map(ing =>
+    `<option value="ing:${ing.nombre}"${('ing:' + ing.nombre) === valorActual ? ' selected' : ''}>${ing.nombre} (${ing.unidad})</option>`
   ).join('');
+
+  // Sub-recetas: una receta puede llevar otra (la masa dentro de la caja).
+  // Se excluye a si misma para no armar un ciclo.
+  const optsRec = recetasCache
+    .filter(r => !r.archivada && r.id !== recetaEditandoId)
+    .map(r => `<option value="rec:${r.id}"${('rec:' + r.id) === valorActual ? ' selected' : ''}>${r.nombre} (receta)</option>`)
+    .join('');
 
   div.innerHTML = `
     <select onchange="updatePlaceholder(this);updatePreviewCosto()">
-      <option value="">— ingrediente —</option>
-      ${opts}
+      <option value="">— elegir —</option>
+      <optgroup label="Ingredientes">${optsIng}</optgroup>
+      ${optsRec ? `<optgroup label="Sub-recetas">${optsRec}</optgroup>` : ''}
     </select>
     <input type="number" placeholder="cant." min="0" step="any" value="${gramos}" oninput="updatePreviewCosto()" />
     <button class="btn-remove" onclick="this.closest('.receta-ing-row').remove();updatePreviewCosto()">✕</button>
@@ -5553,21 +5563,23 @@ function addRecetaIng(nombre = '', gramos = '') {
 }
 
 function getRecetaIngRows() {
-  return Array.from(document.querySelectorAll('#receta-ing-container .receta-ing-row')).map(row => ({
-    nombre: row.querySelector('select').value,
-    gramos: parseFloat(row.querySelector('input').value) || 0
-  })).filter(r => r.nombre && r.gramos > 0);
+  return Array.from(document.querySelectorAll('#receta-ing-container .receta-ing-row')).map(row => {
+    const v = row.querySelector('select').value || '';
+    const gramos = parseFloat(row.querySelector('input').value) || 0;
+    if (v.startsWith('rec:')) {
+      const ref = v.slice(4);
+      const sub = recetasCache.find(r => r.id === ref);
+      return { nombre: sub ? sub.nombre : ref, gramos, tipo: 'receta', receta_ref: ref };
+    }
+    return { nombre: v.startsWith('ing:') ? v.slice(4) : v, gramos, tipo: 'ingrediente', receta_ref: null };
+  }).filter(r => r.nombre && r.gramos > 0);
 }
 
 function updatePreviewCosto() {
   const ings = getRecetaIngRows();
   const rendimiento = parseInt(document.getElementById('receta-rendimiento').value) || 0;
 
-  const costoMasa = ings.reduce((sum, ing) => {
-    const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-    if (!ingData) return sum;
-    return sum + getCostoIngrediente(ingData, ing.gramos);
-  }, 0);
+  const costoMasa = ings.reduce((sum, ing) => sum + costoItemReceta(ing), 0);
 
   document.getElementById('preview-costo-masa').textContent = '$' + Math.round(costoMasa).toLocaleString('es-AR');
   document.getElementById('preview-costo-unit').textContent = rendimiento > 0
@@ -5581,7 +5593,9 @@ function updatePlaceholder(select) {
 }
 
 function updatePlaceholderEl(select, inp) {
-  const nombre = select.value;
+  const v = select.value || '';
+  if (v.startsWith('rec:')) { inp.placeholder = 'unidades'; return; }
+  const nombre = v.startsWith('ing:') ? v.slice(4) : v;
   const ing = ingredientesCache.find(i => i.nombre === nombre);
   if (!ing) { inp.placeholder = 'cant.'; return; }
   switch(ing.unidad) {
@@ -5659,7 +5673,7 @@ function renderRecetas() {
     return;
   }
 
-  el.innerHTML = recetasCache.map(rec => {
+  el.innerHTML = recetasCache.filter(r => !r.archivada).map(rec => {
     const costo = calcularCostoReceta(rec);
     return `
     <div class="receta-item">
@@ -5675,12 +5689,13 @@ function renderRecetas() {
       </div>
       <div class="receta-body" id="body-${rec.id}">
         ${rec.ingredientes.map(ing => {
-          const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-          const costoIng = ingData ? getCostoIngrediente(ingData, ing.gramos) : 0;
-          const unidadLabel = !ingData ? 'g' :
-            (ingData.unidad === 'kg' || ingData.unidad === 'lt') ? (ingData.unidad === 'lt' ? 'ml' : 'g') : 'u.';
+          const esSub = ing.tipo === 'receta';
+          const ingData = esSub ? null : ingredientesCache.find(i => i.nombre === ing.nombre);
+          const costoIng = costoItemReceta(ing);
+          const unidadLabel = esSub ? ' u.' : (!ingData ? 'g' :
+            (ingData.unidad === 'kg' || ingData.unidad === 'lt') ? (ingData.unidad === 'lt' ? 'ml' : 'g') : 'u.');
           return `<div class="receta-ing-detail">
-            <span>${ing.nombre} — ${ing.gramos}${unidadLabel}</span>
+            <span>${esSub ? '\u21b3 ' : ''}${ing.nombre} — ${ing.gramos}${unidadLabel}</span>
             <span>$${Math.round(costoIng).toLocaleString('es-AR')}</span>
           </div>`;
         }).join('')}
@@ -5711,7 +5726,7 @@ function toggleReceta(id) {
 // ══════════════════════════════════════════════════════════════
 function renderCostos() {
   const el = document.getElementById('lista-costos');
-  const recetasConProducto = recetasCache.filter(r => r.producto);
+  const recetasConProducto = recetasCache.filter(r => r.producto && !r.archivada);
 
   if (!recetasConProducto.length) {
     el.innerHTML = '<div class="empty-msg">Asociá tus recetas a productos para ver el análisis de costos y márgenes.</div>';
@@ -5771,12 +5786,27 @@ function renderCostos() {
   }).join('');
 }
 
-function calcularCostoReceta(rec) {
-  return (rec.ingredientes || []).reduce((sum, ing) => {
-    const ingData = ingredientesCache.find(i => i.nombre === ing.nombre);
-    if (!ingData) return sum;
-    return sum + getCostoIngrediente(ingData, ing.gramos);
-  }, 0);
+// Costo de una linea de receta: puede ser un ingrediente o tantas unidades de otra receta.
+function costoItemReceta(item, visitados) {
+  if (item.tipo === 'receta') {
+    const sub = recetasCache.find(r => r.id === item.receta_ref);
+    if (!sub) return 0;
+    const costoSub = calcularCostoReceta(sub, visitados);
+    const rinde = Number(sub.rendimiento) || 1;
+    return (costoSub / rinde) * (Number(item.gramos) || 0);
+  }
+  const ingData = ingredientesCache.find(i => i.nombre === item.nombre);
+  return ingData ? getCostoIngrediente(ingData, item.gramos) : 0;
+}
+
+// Costo total del batch. `visitados` corta un ciclo (A lleva B y B lleva A)
+// para que no quede colgado el navegador.
+function calcularCostoReceta(rec, visitados) {
+  if (!rec) return 0;
+  const vis = new Set(visitados || []);
+  if (vis.has(rec.id)) return 0;
+  vis.add(rec.id);
+  return (rec.ingredientes || []).reduce((sum, item) => sum + costoItemReceta(item, vis), 0);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -5858,7 +5888,7 @@ function poblarSelectorMesesCF() {
   const meses = Object.keys(unidadesPorMesCache).sort().reverse().slice(0, 24);
   sel.innerHTML = meses.map(m =>
     '<option value="' + m + '"' + (m === cfMesSeleccionado ? ' selected' : '') + '>'
-    + nombreMesCF(m) + ' — ' + unidadesPorMesCache[m] + ' u.</option>'
+    + nombreMesCF(m) + ' — ' + unidadesPorMesCache[m].toLocaleString('es-AR') + ' u.</option>'
   ).join('');
 }
 
@@ -5896,7 +5926,7 @@ function actualizarCostoFijoPreview() {
   if (lbl) lbl.textContent = 'Costo fijo por unidad en ' + (cfMesSeleccionado ? nombreMesCF(cfMesSeleccionado) : 'este mes');
   document.getElementById('cf-por-unidad').textContent =
     unidadesMesCache > 0
-      ? '$' + cfPorUnidad.toFixed(2) + ' (' + unidadesMesCache + ' u.)'
+      ? '$' + cfPorUnidad.toFixed(2) + ' (' + unidadesMesCache.toLocaleString('es-AR') + ' u. producidas)'
       : (cfMesSeleccionado ? 'Sin unidades cobradas' : 'Cargando unidades...');
   renderCostos();
 }
@@ -5936,12 +5966,24 @@ async function calcularUnidadesMes() {
       pedidosCache = Array.isArray(p) ? p : [];
     } catch(e) { return; }
   }
+  // Los costos fijos se reparten por UNIDAD PRODUCIDA, no por caja vendida:
+  // una caja de 30 medialunas absorbe 30 veces mas que un croissant suelto.
+  if (!productosCache.length) {
+    try { productosCache = await apiGetProductos(); } catch(e) {}
+  }
+  const unidadesPorCaja = (nombreProducto) => {
+    const prod = productosCache.find(x => x.nombre === nombreProducto);
+    if (prod && Number(prod.unidades_por_caja) > 0) return Number(prod.unidades_por_caja);
+    const m = String(nombreProducto || '').match(/x\s*(\d+)/i);   // fallback: "Caja medialunas x30"
+    return m ? Number(m[1]) : 1;
+  };
+
   // Unidades cobradas agrupadas por mes (la fecha ya viene como YYYY-MM-DD)
   unidadesPorMesCache = {};
   pedidosCache.forEach(p => {
     if (p.estado !== 'Cobrado' || !p.fecha) return;
     const clave = String(p.fecha).slice(0, 7);
-    const unidades = (p.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+    const unidades = (p.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0) * unidadesPorCaja(it.nombre), 0);
     unidadesPorMesCache[clave] = (unidadesPorMesCache[clave] || 0) + unidades;
   });
 
