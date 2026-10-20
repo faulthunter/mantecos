@@ -87,7 +87,30 @@ textarea { resize: none; }
 .search-bar input { padding-left: 36px; font-size: 14px; }
 .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
 
-.kanban-cols { display: flex; flex-direction: column; gap: 12px; }
+.kanban-cols { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; }
+@media (min-width: 900px) {
+  .kanban-cols { grid-template-columns: 1.55fr 1fr; }
+  .kanban-cols .kanban-col.col-produccion { grid-row: span 2; }
+}
+.grupo-head { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #F3EFE8; border-bottom: 1px solid var(--border); }
+.grupo-head.vencido { background: #FDEDED; border-bottom-color: #F3D9D9; }
+.grupo-head .g-tit { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+.grupo-head.vencido .g-tit { color: #9B1C1C; }
+.grupo-head .g-meta { font-size: 11px; color: var(--muted); }
+.grupo-head.vencido .g-meta { color: #9B1C1C; }
+.ped-row { border-bottom: 1px solid var(--border); }
+.ped-row:last-child { border-bottom: none; }
+.ped-row.open { background: #FFFCF7; }
+.ped-main { display: flex; align-items: center; gap: 10px; padding: 7px 12px; }
+.ped-tap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: none; padding: 0; font-family: inherit; text-align: left; cursor: pointer; color: inherit; min-height: 40px; }
+.ped-chev { color: var(--muted); font-size: 11px; width: 10px; flex-shrink: 0; }
+.ped-cli { font-size: 14px; font-weight: 700; }
+.ped-sub { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ped-total { font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.ped-next { min-width: 42px; min-height: 42px; border: 1px solid #C9E8D2; background: #EAF7EE; color: #176B33; border-radius: 9px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; flex-shrink: 0; }
+.ped-det { display: none; padding: 2px 12px 12px 34px; }
+.ped-row.open .ped-det { display: block; }
+.ped-det .items-list-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text); padding: 3px 0; border-bottom: 1px dotted var(--border); }
 .kanban-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .kanban-col-header { padding: 10px 14px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
 .kanban-col-header .count { font-size: 11px; background: rgba(0,0,0,0.08); padding: 2px 7px; border-radius: 20px; margin-left: auto; margin-right: 8px; }
@@ -664,8 +687,6 @@ canvas { width: 100% !important; }
   <div class="kanban-header" style="margin-top:16px">
     <h2>Estado de pedidos</h2>
     <div style="display:flex;gap:8px">
-      <button class="btn-refresh" id="btn-vista-toggle" onclick="toggleContenidoKanban()">☰ Lista</button>
-      <button class="btn-refresh" id="btn-layout-toggle" onclick="toggleLayoutKanban()">▦ Tablero</button>
       <button class="btn-refresh" onclick="generarPDFProduccion()">📦 PDF Producción</button>
       <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
     </div>
@@ -3503,71 +3524,133 @@ function renderKanban(pedidos) {
       return;
     }
 
-    if (contenidoKanban === 'lista') {
-      col.innerHTML = `<div style="background:var(--surface)">${filtered.map(p => pedidoListaHTML(p)).join('')}</div>`;
-    } else {
-      col.innerHTML = filtered.map(p => pedidoCardHTML(p)).join('');
-    }
+    // Agrupado: producción y listo por fecha de entrega, entregados por antigüedad de la deuda
+    const grupos = agruparPedidos(filtered, estado === 'Entregado');
+    col.innerHTML = grupos.map(g => `
+      <div class="grupo-head${g.vencido ? ' vencido' : ''}">
+        <span class="g-tit">${g.titulo}</span>
+        <span class="g-meta">${g.items.length} ${g.items.length === 1 ? 'pedido' : 'pedidos'} · $${Math.round(g.suma).toLocaleString('es-AR')}</span>
+      </div>
+      ${g.items.map(p => pedidoRowHTML(p)).join('')}
+    `).join('');
   });
 }
 
-function pedidoCardHTML(p) {
-  const idx    = ESTADOS.indexOf(estadoNorm(p));
-  const LABELS = { 'Producción': 'Producción', 'Listo': 'Listo para entregar', 'Entregado': 'Entregado por cobrar' };
-  const prev   = idx > 0 ? ESTADOS[idx - 1] : null;
-  const next   = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
-  const btnPrev = prev ? `<button class="move-btn" onclick="moverPedido('${p.id}','${prev}')">← ${LABELS[prev]}</button>` : '';
-  const btnNext = next ? `<button class="move-btn" onclick="moverPedido('${p.id}','${next}')">${LABELS[next]} →</button>` : '';
+// Días entre hoy y una fecha (positivo = pasado)
+function diasDesde(fecha) {
+  if (!fecha) return 0;
+  const hoy = new Date(fechaARG() + 'T12:00:00');
+  const f   = new Date(fecha + 'T12:00:00');
+  return Math.round((hoy - f) / 86400000);
+}
 
-  let itemsHTML = '';
-  if (p.items && p.items.length > 0) {
-    const rows = p.items.map(it =>
-      `<div class="items-list-row"><span>${it.nombre} ×${it.cantidad}</span><span>$${Math.round(it.precio * it.cantidad).toLocaleString('es-AR')}</span></div>`
-    ).join('');
-    itemsHTML = `
-      <span class="items-toggle" onclick="toggleItems('items-${p.id}', this)">${p.items.length} producto${p.items.length > 1 ? 's' : ''} ▸</span>
-      <div class="items-list" id="items-${p.id}">${rows}</div>
-    `;
-  } else {
-    // Pedido sin productos: advertir (bug de carga incompleta)
-    itemsHTML = `
-      <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:6px 10px;margin-top:4px;font-size:12px;color:#B91C1C;font-weight:600">
-        ⚠️ Sin productos — pedido incompleto${(Number(p.total) > 0) ? ` (total $${Math.round(p.total).toLocaleString('es-AR')})` : ''}. Editalo para agregarlos.
-      </div>
-    `;
-  }
+function fechaCortaPedido(fecha) {
+  if (!fecha) return 'sin fecha';
+  const dias  = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const f = new Date(fecha + 'T12:00:00');
+  const d = diasDesde(fecha);
+  return dias[f.getDay()] + ' ' + f.getDate() + (Math.abs(d) > 20 ? ' ' + meses[f.getMonth()] : '');
+}
+
+function agruparPedidos(lista, porAntiguedad) {
+  const grupos = [];
+  const buscar = (titulo, vencido) => {
+    let g = grupos.find(x => x.titulo === titulo);
+    if (!g) { g = { titulo, vencido, items: [], suma: 0 }; grupos.push(g); }
+    return g;
+  };
+  const orden = lista.slice().sort((a, b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
+  orden.forEach(p => {
+    const base = porAntiguedad ? (p.fecha_entregado || p.fecha) : p.fecha;
+    const d = diasDesde(base);
+    let titulo, vencido;
+    if (porAntiguedad) {
+      vencido = d > 15;
+      titulo  = d > 15 ? 'Más de 15 días' : (d > 7 ? 'Hace más de una semana' : 'Esta semana');
+    } else {
+      vencido = d > 0;
+      titulo  = d > 0 ? 'Vencidos' : (d === 0 ? 'Hoy · ' + fechaCortaPedido(p.fecha) : fechaCortaPedido(p.fecha));
+    }
+    const g = buscar(titulo, vencido);
+    g.items.push(p);
+    g.suma += Number(p.total) || 0;
+  });
+  // Los vencidos primero, después por fecha
+  return grupos.sort((a, b) => (b.vencido ? 1 : 0) - (a.vencido ? 1 : 0));
+}
+
+function togglePedidoRow(id) {
+  const row = document.getElementById('row-' + id);
+  if (!row) return;
+  const abierto = row.classList.toggle('open');
+  const chev = row.querySelector('.ped-chev');
+  if (chev) chev.textContent = abierto ? '▾' : '▸';
+}
+
+// Fila compacta: una linea por pedido, el detalle y las acciones se abren al tocarla.
+function pedidoRowHTML(p) {
+  const idx  = ESTADOS.indexOf(estadoNorm(p));
+  const next = idx < ESTADOS.length - 1 ? ESTADOS[idx + 1] : null;
+  const LABELS = { 'Producción': 'producción', 'Listo': 'listo para entregar', 'Entregado': 'entregado' };
+
+  // Boton de la derecha: avanza de estado; en la ultima columna, cobra.
+  const btnAvanzar = next
+    ? `<button class="ped-next" onclick="moverPedido('${p.id}','${next}')" aria-label="Pasar el pedido de ${escapeHtml(p.cliente)} a ${LABELS[next]}">→</button>`
+    : `<button class="ped-next" onclick="archivarPedido('${p.id}')" aria-label="Marcar cobrado el pedido de ${escapeHtml(p.cliente)}">$</button>`;
+
+  const resumen = (p.items && p.items.length)
+    ? p.items.map(it => `${it.cantidad} ${it.nombre}`).join(' · ')
+    : '⚠️ sin productos — editalo para agregarlos';
+
+  const itemsHTML = (p.items && p.items.length)
+    ? p.items.map(it => `<div class="items-list-row"><span>${it.nombre} ×${it.cantidad}</span><span>$${Math.round(it.precio * it.cantidad).toLocaleString('es-AR')}</span></div>`).join('')
+    : `<div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:6px 10px;font-size:12px;color:#B91C1C;font-weight:600">⚠️ Sin productos — pedido incompleto. Editalo para agregarlos.</div>`;
+
+  const chipSinContar = p.no_contabilizar
+    ? ' <span style="background:#E5E7EB;color:#4B5563;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle">SIN CONTAR</span>' : '';
+  const fechaTxt = estadoNorm(p) === 'Entregado'
+    ? chipDiasEntregado(p)
+    : ` <span style="font-size:11px;font-weight:700;color:${esPedidoVencido(p) ? 'var(--error)' : 'var(--muted)'}">${fechaCortaPedido(p.fecha)}</span>`;
+  const obsTxt = p.observaciones ? ` <span style="font-size:11px;font-weight:600;color:var(--muted)">· ${escapeHtml(p.observaciones)}</span>` : '';
 
   return `
-    <div class="pedido-card" id="card-${p.id}" style="${p.no_contabilizar ? 'opacity:0.62;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(0,0,0,0.02) 8px,rgba(0,0,0,0.02) 16px)' : ''}">
-      <div class="pedido-card-top">
-        <div>
-          <h3>${p.cliente}${p.no_contabilizar ? ' <span style="background:#E5E7EB;color:#4B5563;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;vertical-align:middle;margin-left:4px">SIN CONTAR</span>' : ''}</h3>
-          <div class="fecha">${p.fecha ? '📅 ' + p.fecha : ''}${esPedidoVencido(p) ? ' <span style="background:#FEE2E2;color:#C0392B;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600">VENCIDO</span>' : ''}${chipDiasEntregado(p)}</div>
-          ${p.observaciones ? `<div class="obs">${p.observaciones}</div>` : ''}
-          <div class="envio-wrap">
-            <span class="items-toggle" onclick="toggleEnvioEdit('${p.id}', this)">🚚 Envío: $${Math.round(p.envio || 0).toLocaleString('es-AR')} ▸</span>
-            <div class="envio-edit" id="envio-edit-${p.id}" style="display:none">
-              <input type="number" min="0" id="envio-input-${p.id}" value="${p.envio || 0}" onclick="event.stopPropagation()" />
-              <button onclick="guardarEnvio('${p.id}')">Guardar</button>
-            </div>
+    <div class="ped-row" id="row-${p.id}" style="${p.no_contabilizar ? 'opacity:0.68' : ''}">
+      <div class="ped-main">
+        <button class="ped-tap" onclick="togglePedidoRow('${p.id}')">
+          <span class="ped-chev">▸</span>
+          <span style="flex:1 1 auto;min-width:0">
+            <span style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap">
+              <span class="ped-cli">${p.cliente}</span>${fechaTxt}${chipSinContar}${obsTxt}
+            </span>
+            <span class="ped-sub">${resumen}</span>
+          </span>
+        </button>
+        <span class="ped-total">$${Math.round(p.total || 0).toLocaleString('es-AR')}</span>
+        ${btnAvanzar}
+      </div>
+      <div class="ped-det">
+        ${itemsHTML}
+        <div class="envio-wrap" style="margin-top:8px">
+          <span class="items-toggle" onclick="toggleEnvioEdit('${p.id}', this)">🚚 Envío: $${Math.round(p.envio || 0).toLocaleString('es-AR')} ▸</span>
+          <div class="envio-edit" id="envio-edit-${p.id}" style="display:none">
+            <input type="number" min="0" id="envio-input-${p.id}" value="${p.envio || 0}" onclick="event.stopPropagation()" />
+            <button onclick="guardarEnvio('${p.id}')">Guardar</button>
           </div>
-          ${itemsHTML}
         </div>
-        <div class="total-badge">$${Math.round(p.total || 0).toLocaleString('es-AR')}</div>
+        <div class="card-actions" style="margin-top:8px">
+          <button class="action-btn edit"       onclick="abrirEditarById('${p.id}')">✏️ Editar</button>
+          <button class="action-btn pdf-btn"    onclick="generarPDFById('${p.id}')">📄 PDF</button>
+          <button class="action-btn remito-btn" onclick="generarRemitoById('${p.id}')">📋 Remito</button>
+          <button class="action-btn partial"    onclick="abrirParcial('${p.id}')">📦 Parcial</button>
+          ${next ? `<button class="action-btn archive" onclick="archivarPedido('${p.id}')">✅ Cobrado</button>` : ''}
+          <button class="action-btn delete"     onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none">
+          <input type="checkbox" ${p.no_contabilizar ? 'checked' : ''} onchange="toggleNoContabilizar('${p.id}', this.checked)" style="cursor:pointer;margin:0" />
+          No contabilizar en totales
+        </label>
       </div>
-      ${(btnPrev || btnNext) ? `<div class="move-btns">${btnPrev}${btnNext}</div>` : ''}
-      <div class="card-actions">
-        <button class="action-btn edit"     onclick="abrirEditarById('${p.id}')">✏️ Editar</button>
-        <button class="action-btn pdf-btn"  onclick="generarPDFById('${p.id}')">📄 PDF</button>
-        <button class="action-btn remito-btn"  onclick="generarRemitoById('${p.id}')">📋 Remito</button>
-        <button class="action-btn archive"  onclick="archivarPedido('${p.id}')">✅ Cobrado</button>
-        <button class="action-btn partial"  onclick="abrirParcial('${p.id}')">📦 Parcial</button>
-        <button class="action-btn delete"   onclick="eliminarPedido('${p.id}')">🗑 Eliminar</button>
-      </div>
-      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none">
-        <input type="checkbox" ${p.no_contabilizar ? 'checked' : ''} onchange="toggleNoContabilizar('${p.id}', this.checked)" style="cursor:pointer;margin:0" />
-        No contabilizar en totales
-      </label>
     </div>
   `;
 }
