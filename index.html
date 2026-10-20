@@ -597,6 +597,7 @@ canvas { width: 100% !important; }
 <nav class="nav" id="nav-produccion" style="display:none">
   <button class="nav-btn active" id="nav-nuevo"  onclick="showPage('nuevo')">📋 Pedido</button>
   <button class="nav-btn"        id="nav-kanban" onclick="showPage('kanban'); loadKanban()">📌 Kanban</button>
+  <button class="nav-btn"        id="nav-cobranzas" onclick="showPage('cobranzas'); loadKanban()">💵 Cobranzas</button>
 </nav>
 
 <nav class="nav" id="nav-costeo-tabs" style="display:none">
@@ -701,13 +702,6 @@ canvas { width: 100% !important; }
     <span class="search-icon">🔍</span>
     <input type="text" id="kanban-search" placeholder="Buscar por cliente..." oninput="filtrarKanban()" />
   </div>
-  <div id="box-por-cobrar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
-    <div>
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600">Pedidos por cobrar</div>
-      <div id="por-cobrar-count" style="font-size:12px;color:var(--muted);margin-top:1px">0 pedidos entregados</div>
-    </div>
-    <div id="por-cobrar-total" style="font-size:22px;font-weight:800;color:var(--accent)">$0</div>
-  </div>
   <div class="kanban-cols">
     <div class="kanban-col col-produccion">
       <div class="kanban-col-header">Producción <span class="count" id="count-produccion">0</span><span class="chevron">▾</span></div>
@@ -717,10 +711,31 @@ canvas { width: 100% !important; }
       <div class="kanban-col-header">Listo para entregar <span class="count" id="count-listo">0</span><span class="chevron">▾</span></div>
       <div class="kanban-cards" id="col-listo"></div>
     </div>
-    <div class="kanban-col col-entregado">
-      <div class="kanban-col-header">Entregado por cobrar <span class="count" id="count-entregado">0</span><span class="chevron">▾</span></div>
-      <div class="kanban-cards" id="col-entregado"></div>
+  </div>
+</div>
+
+<!-- ── PÁGINA COBRANZAS ───────────────────────────────────── -->
+<div class="page" id="page-cobranzas">
+  <div class="kanban-header" style="margin-top:16px">
+    <h2>Cobranzas</h2>
+    <div style="display:flex;gap:8px">
+      <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600">Entregado y sin cobrar</div>
+      <div id="cobranzas-count" style="font-size:12px;color:var(--muted);margin-top:1px">0 pedidos</div>
+    </div>
+    <div id="cobranzas-total" style="font-size:22px;font-weight:800;color:var(--accent)">$0</div>
+  </div>
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="cobranzas-search" placeholder="Buscar por cliente..." oninput="renderCobranzas()" />
+  </div>
+  <div class="kanban-col col-entregado" style="margin-top:12px">
+    <div class="kanban-col-header">Por cobrar <span class="count" id="count-entregado">0</span></div>
+    <div class="kanban-cards" id="col-entregado"></div>
   </div>
 </div>
 
@@ -2935,6 +2950,7 @@ function pedidoListaHTML(p) {
 
 
 const ESTADOS   = ['Producción', 'Listo', 'Entregado'];
+const ESTADOS_KANBAN = ['Producción', 'Listo'];   // los entregados tienen su propia pantalla
 const COL_IDS   = { 'Producción': 'col-produccion', 'Listo': 'col-listo', 'Entregado': 'col-entregado' };
 const COUNT_IDS = { 'Producción': 'count-produccion', 'Listo': 'count-listo', 'Entregado': 'count-entregado' };
 
@@ -3507,14 +3523,8 @@ function renderKanban(pedidos) {
   if (cont) cont.classList.toggle('tablero', layoutKanban === 'tablero');
   if (cont) cont.classList.toggle('lista-mode', contenidoKanban === 'lista');
 
-  // Recuadro "Pedidos por cobrar": total de entregados sin cobrar (todos, sin filtro de semana)
-  const porCobrar = (todosPedidos || []).filter(p => p.estado === 'Entregado');
-  const totalPorCobrar = porCobrar.reduce((s, p) => s + (Number(p.total) || 0), 0);
-  const elT = document.getElementById('por-cobrar-total');
-  const elC = document.getElementById('por-cobrar-count');
-  if (elT) elT.textContent = '$' + Math.round(totalPorCobrar).toLocaleString('es-AR');
-  if (elC) elC.textContent = porCobrar.length + (porCobrar.length === 1 ? ' pedido entregado' : ' pedidos entregados');
-  ESTADOS.forEach(estado => {
+  // El tablero muestra solo lo que esta en marcha; los entregados viven en Cobranzas
+  ESTADOS_KANBAN.forEach(estado => {
     const col   = document.getElementById(COL_IDS[estado]);
     const count = document.getElementById(COUNT_IDS[estado]);
     const filtered = pedidos.filter(p => estadoNorm(p) === estado);
@@ -3535,6 +3545,43 @@ function renderKanban(pedidos) {
       ${g.items.map(p => pedidoRowHTML(p)).join('')}
     `).join('');
   });
+
+  renderCobranzas();
+}
+
+// ── COBRANZAS: entregados esperando el cobro, en su propia pantalla ──
+function renderCobranzas() {
+  const col = document.getElementById('col-entregado');
+  if (!col) return;
+  const inp = document.getElementById('cobranzas-search');
+  const q = inp ? inp.value.toLowerCase().trim() : '';
+
+  let lista = (todosPedidos || []).filter(p => p.estado === 'Entregado');
+  const total = lista.reduce((s, p) => s + (Number(p.total) || 0), 0);
+
+  const elT = document.getElementById('cobranzas-total');
+  const elC = document.getElementById('cobranzas-count');
+  if (elT) elT.textContent = '$' + Math.round(total).toLocaleString('es-AR');
+  if (elC) elC.textContent = lista.length + (lista.length === 1 ? ' pedido' : ' pedidos');
+
+  if (q) lista = lista.filter(p => p.cliente && p.cliente.toLowerCase().includes(q));
+
+  const count = document.getElementById(COUNT_IDS['Entregado']);
+  if (count) count.textContent = lista.length;
+
+  if (lista.length === 0) {
+    col.innerHTML = '<div class="empty-col">' + (q ? 'Ningún cliente con ese nombre.' : 'No queda nada por cobrar.') + '</div>';
+    return;
+  }
+
+  const grupos = agruparPedidos(lista, true);
+  col.innerHTML = grupos.map(g => `
+    <div class="grupo-head${g.vencido ? ' vencido' : ''}">
+      <span class="g-tit">${g.titulo}</span>
+      <span class="g-meta">${g.items.length} ${g.items.length === 1 ? 'pedido' : 'pedidos'} · $${Math.round(g.suma).toLocaleString('es-AR')}</span>
+    </div>
+    ${g.items.map(p => pedidoRowHTML(p)).join('')}
+  `).join('');
 }
 
 // Días entre hoy y una fecha (positivo = pasado)
