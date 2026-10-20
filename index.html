@@ -89,7 +89,8 @@ textarea { resize: none; }
 
 .kanban-cols { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; }
 @media (min-width: 900px) {
-  .kanban-cols { grid-template-columns: 1.55fr 1fr; }
+  /* El tablero se sale del contenedor angosto de la app para usar la pantalla */
+  .kanban-cols { grid-template-columns: 1.55fr 1fr; position: relative; left: 50%; transform: translateX(-50%); width: min(1180px, 94vw); }
   .kanban-cols .kanban-col.col-produccion { grid-row: span 2; }
 }
 .grupo-head { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #F3EFE8; border-bottom: 1px solid var(--border); }
