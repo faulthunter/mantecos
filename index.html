@@ -250,6 +250,15 @@ canvas { width: 100% !important; }
 .modulo-nombre { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .modulo-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .modulo-wip { opacity: 0.6; }
+.prod-chips { display: flex; gap: 6px; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.prod-chips::-webkit-scrollbar { display: none; }
+.prod-chip { display: flex; align-items: baseline; gap: 6px; background: rgba(255,255,255,0.14); border-radius: 8px; padding: 4px 10px; flex: 0 0 auto; }
+.prod-chip .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.8); white-space: nowrap; }
+.prod-chip .v { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; letter-spacing: -0.3px; }
+.prod-chip.cero { opacity: 0.42; }
+.prod-chip.destacado { background: #fff; }
+.prod-chip.destacado .l { color: var(--accent); opacity: 0.85; }
+.prod-chip.destacado .v { color: var(--accent); }
 .modulo-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.05em; }
 
 /* ── VISTA LISTA KANBAN ── */
@@ -528,26 +537,18 @@ canvas { width: 100% !important; }
 </header>
 
 <!-- Header producción con badges (solo visible en módulo producción) -->
-<div id="header-produccion" style="display:none;background:var(--accent);padding:10px 20px 12px">
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;row-gap:10px">
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">A producir</div><div id="badge-nuevos" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Medialunas</div><div id="badge-medialunas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Croissants</div><div id="badge-croissants" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Pan choco</div><div id="badge-panchoco" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Trenzas</div><div id="badge-trenzas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-  </div>
-  <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15)">
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Hojaldres</div><div id="badge-hojaldres" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Palmeritas</div><div id="badge-palmeritas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Danesas</div><div id="badge-danesas" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
-    <div style="width:1px;background:rgba(255,255,255,0.2)"></div>
-    <div><div style="font-size:9px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:0.08em">Roll de canela</div><div id="badge-rolls" style="font-size:22px;font-weight:700;color:white;line-height:1.1;letter-spacing:-1px">—</div></div>
+<!-- Header producción: una sola fila de chips, solo en la pestaña Kanban -->
+<div id="header-produccion" style="display:none;background:var(--accent);padding:8px 14px">
+  <div class="prod-chips">
+    <div class="prod-chip destacado"><span class="l">A producir</span><span class="v" id="badge-nuevos">—</span></div>
+    <div class="prod-chip"><span class="l">Medialunas</span><span class="v" id="badge-medialunas">—</span></div>
+    <div class="prod-chip"><span class="l">Croissants</span><span class="v" id="badge-croissants">—</span></div>
+    <div class="prod-chip"><span class="l">Pan choco</span><span class="v" id="badge-panchoco">—</span></div>
+    <div class="prod-chip"><span class="l">Trenzas</span><span class="v" id="badge-trenzas">—</span></div>
+    <div class="prod-chip"><span class="l">Hojaldres</span><span class="v" id="badge-hojaldres">—</span></div>
+    <div class="prod-chip"><span class="l">Palmeritas</span><span class="v" id="badge-palmeritas">—</span></div>
+    <div class="prod-chip"><span class="l">Danesas</span><span class="v" id="badge-danesas">—</span></div>
+    <div class="prod-chip"><span class="l">Roll de canela</span><span class="v" id="badge-rolls">—</span></div>
   </div>
 </div>
 
@@ -1365,7 +1366,6 @@ function abrirModulo(modulo) {
 
   if (modulo === 'produccion') {
     document.getElementById('nav-produccion').style.display = 'flex';
-    document.getElementById('header-produccion').style.display = 'block';
     showPage('nuevo');
   } else if (modulo === 'costeo') {
     document.getElementById('nav-costeo-tabs').style.display = 'flex';
@@ -1407,6 +1407,10 @@ function showPage(name) {
   if (page) page.classList.add('active');
   const navBtn = document.getElementById('nav-' + name);
   if (navBtn) navBtn.classList.add('active');
+  // El resumen de producción solo tiene sentido en el tablero
+  const hp = document.getElementById('header-produccion');
+  if (hp) hp.style.display = (moduloActivo === 'produccion' && name === 'kanban') ? 'block' : 'none';
+
   if (name === 'config') {
     document.getElementById('config-dropdown').classList.remove('open');
     document.getElementById('config-menu-label').textContent = '⚙️ Seleccioná una opción';
@@ -3011,6 +3015,11 @@ function actualizarBadges(pedidos) {
   document.getElementById('badge-danesas').textContent    = t.danesas;
   document.getElementById('badge-rolls').textContent      = t.rolls;
 
+  // Lo que no hay que producir se apaga, para que salte lo que si
+  document.querySelectorAll('#header-produccion .prod-chip .v').forEach(el => {
+    const chip = el.closest('.prod-chip');
+    if (chip) chip.classList.toggle('cero', (Number(el.textContent) || 0) === 0);
+  });
 }
 
 async function loadKanban() {
