@@ -80,6 +80,17 @@ textarea { resize: none; }
 
 /* Kanban */
 .kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tablero-toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 16px 0 12px; display: flex; flex-direction: column; gap: 10px; }
+.tablero-toolbar .tt-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tablero-toolbar h2 { font-size: 16px; font-weight: 700; margin: 0; }
+.tablero-toolbar .tt-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.tablero-toolbar .tt-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.tablero-toolbar .tt-filtros .period-btn { flex: 1 1 auto; text-align: center; }
+.tablero-toolbar .search-bar { margin-bottom: 0; }
+@media (max-width: 520px) {
+  .tablero-toolbar .tt-acciones { width: 100%; }
+  .tablero-toolbar .tt-acciones .btn-refresh { flex: 1 1 auto; text-align: center; }
+}
 .kanban-header h2 { font-size: 16px; font-weight: 600; }
 .btn-refresh { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: 13px; cursor: pointer; color: var(--muted); font-family: inherit; }
 
@@ -250,8 +261,7 @@ canvas { width: 100% !important; }
 .modulo-nombre { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .modulo-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .modulo-wip { opacity: 0.6; }
-.prod-chips { display: flex; gap: 6px; align-items: center; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.prod-chips::-webkit-scrollbar { display: none; }
+.prod-chips { display: flex; gap: 6px; row-gap: 6px; align-items: center; flex-wrap: wrap; }
 .prod-chip { display: flex; align-items: baseline; gap: 6px; background: rgba(255,255,255,0.14); border-radius: 8px; padding: 4px 10px; flex: 0 0 auto; }
 .prod-chip .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.8); white-space: nowrap; }
 .prod-chip .v { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; letter-spacing: -0.3px; }
@@ -688,21 +698,23 @@ canvas { width: 100% !important; }
 
 <!-- ── PÁGINA KANBAN ──────────────────────────────────────── -->
 <div class="page" id="page-kanban">
-  <div class="kanban-header" style="margin-top:16px">
-    <h2>Estado de pedidos</h2>
-    <div style="display:flex;gap:8px">
-      <button class="btn-refresh" onclick="generarPDFProduccion()">📦 PDF Producción</button>
-      <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
+  <div class="tablero-toolbar">
+    <div class="tt-top">
+      <h2>Estado de pedidos</h2>
+      <div class="tt-acciones">
+        <button class="btn-refresh" onclick="generarPDFProduccion()">📦 PDF Producción</button>
+        <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
+      </div>
     </div>
-  </div>
-  <div style="display:flex;gap:6px;margin-bottom:10px">
-    <button class="period-btn"        id="filtro-todos"        onclick="setFiltroSemana('todos',this)">Todos</button>
-    <button class="period-btn active" id="filtro-esta-semana"  onclick="setFiltroSemana('esta',this)">Esta semana</button>
-    <button class="period-btn"        id="filtro-prox-semana"  onclick="setFiltroSemana('proxima',this)">Próxima semana</button>
-  </div>
-  <div class="search-bar">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="kanban-search" placeholder="Buscar por cliente..." oninput="filtrarKanban()" />
+    <div class="tt-filtros">
+      <button class="period-btn"        id="filtro-todos"        onclick="setFiltroSemana('todos',this)">Todos</button>
+      <button class="period-btn active" id="filtro-esta-semana"  onclick="setFiltroSemana('esta',this)">Esta semana</button>
+      <button class="period-btn"        id="filtro-prox-semana"  onclick="setFiltroSemana('proxima',this)">Próxima semana</button>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="kanban-search" placeholder="Buscar por cliente..." oninput="filtrarKanban()" />
+    </div>
   </div>
   <div class="kanban-cols">
     <div class="kanban-col col-produccion">
@@ -718,10 +730,16 @@ canvas { width: 100% !important; }
 
 <!-- ── PÁGINA COBRANZAS ───────────────────────────────────── -->
 <div class="page" id="page-cobranzas">
-  <div class="kanban-header" style="margin-top:16px">
-    <h2>Cobranzas</h2>
-    <div style="display:flex;gap:8px">
-      <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
+  <div class="tablero-toolbar">
+    <div class="tt-top">
+      <h2>Cobranzas</h2>
+      <div class="tt-acciones">
+        <button class="btn-refresh" onclick="loadKanban()">↻ Actualizar</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="cobranzas-search" placeholder="Buscar por cliente..." oninput="renderCobranzas()" />
     </div>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
@@ -731,11 +749,7 @@ canvas { width: 100% !important; }
     </div>
     <div id="cobranzas-total" style="font-size:22px;font-weight:800;color:var(--accent)">$0</div>
   </div>
-  <div class="search-bar">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="cobranzas-search" placeholder="Buscar por cliente..." oninput="renderCobranzas()" />
-  </div>
-  <div class="kanban-col col-entregado" style="margin-top:12px">
+  <div class="kanban-col col-entregado">
     <div class="kanban-col-header">Por cobrar <span class="count" id="count-entregado">0</span></div>
     <div class="kanban-cards" id="col-entregado"></div>
   </div>
