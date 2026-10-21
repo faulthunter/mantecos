@@ -547,6 +547,7 @@ canvas { width: 100% !important; }
     <div class="prod-chip"><span class="l">Trenzas</span><span class="v" id="badge-trenzas">—</span></div>
     <div class="prod-chip"><span class="l">Hojaldres</span><span class="v" id="badge-hojaldres">—</span></div>
     <div class="prod-chip"><span class="l">Palmeritas</span><span class="v" id="badge-palmeritas">—</span></div>
+    <div class="prod-chip"><span class="l">Tiras cañoncitos</span><span class="v" id="badge-canioncitos">—</span></div>
     <div class="prod-chip"><span class="l">Danesas</span><span class="v" id="badge-danesas">—</span></div>
     <div class="prod-chip"><span class="l">Roll de canela</span><span class="v" id="badge-rolls">—</span></div>
   </div>
@@ -2968,7 +2969,7 @@ function calcularTotalesProduccion(pedidos, filtro) {
   if (filtro === 'esta')         filtrados = filtrados.filter(p => pedidoEnSemana(p, 0));
   else if (filtro === 'proxima') filtrados = filtrados.filter(p => pedidoEnSemana(p, 1));
 
-  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0, rolls:0 };
+  const t = { medialunas:0, croissants:0, panchoco:0, trenzas:0, hojaldres:0, palmeritas:0, danesas:0, rolls:0, canioncitos:0 };
   filtrados.forEach(p => {
     (p.items || []).forEach(it => {
       const n = String(it.nombre).toLowerCase().trim();
@@ -2985,7 +2986,10 @@ function calcularTotalesProduccion(pedidos, filtro) {
       if (n === 'hojaldre')                         t.hojaldres += cant;
       if (n === 'caja hojaldre x20')                t.hojaldres += cant * 20;
       if (n === 'palmerita')                        t.palmeritas += cant;
+      if (n === 'palmerita minorista')              t.palmeritas += cant;
       if (n === 'caja palmeritas x20')              t.palmeritas += cant * 20;
+      // De los cañoncitos se cuenta la tira, no la unidad suelta
+      if (n === 'tira de canioncitos')              t.canioncitos += cant;
       if (n === 'danesa')                           t.danesas += cant;
       if (n === 'caja danesas x20')                 t.danesas += cant * 20;
       if (n === 'roll de canela mayorista')         t.rolls += cant;
@@ -3014,6 +3018,7 @@ function actualizarBadges(pedidos) {
   document.getElementById('badge-palmeritas').textContent = t.palmeritas;
   document.getElementById('badge-danesas').textContent    = t.danesas;
   document.getElementById('badge-rolls').textContent      = t.rolls;
+  document.getElementById('badge-canioncitos').textContent = t.canioncitos;
 
   // Lo que no hay que producir se apaga, para que salte lo que si
   document.querySelectorAll('#header-produccion .prod-chip .v').forEach(el => {
