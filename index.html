@@ -1422,9 +1422,9 @@ function showPage(name) {
   if (page) page.classList.add('active');
   const navBtn = document.getElementById('nav-' + name);
   if (navBtn) navBtn.classList.add('active');
-  // El resumen de producción solo tiene sentido en el tablero
+  // El resumen de producción acompaña a todo el módulo
   const hp = document.getElementById('header-produccion');
-  if (hp) hp.style.display = (moduloActivo === 'produccion' && name === 'kanban') ? 'block' : 'none';
+  if (hp) hp.style.display = (moduloActivo === 'produccion') ? 'block' : 'none';
 
   if (name === 'config') {
     document.getElementById('config-dropdown').classList.remove('open');
